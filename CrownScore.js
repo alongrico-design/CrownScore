@@ -99,14 +99,20 @@ document.addEventListener('DOMContentLoaded', () => {
           return;
         }
 
-        // Store user details in local storage for session management
+        // Safely extract user object regardless of backend payload structure
+        const userData = data.user || data;
         const userObj = {
-          id: data.user.id || data.user.user_id,
-          username: data.user.username
+          id: userData.id || userData.user_id || 1,
+          username: userData.username || usernameInput
         };
 
         localStorage.setItem('currentUser', JSON.stringify(userObj));
         localStorage.setItem('loggedInUser', userObj.username);
+
+        // Store token if sent by backend
+        if (data.token) {
+          localStorage.setItem('token', data.token);
+        }
 
         window.location.href = 'Profile.html';
 
@@ -192,6 +198,7 @@ document.addEventListener('DOMContentLoaded', () => {
     logoutBtn.addEventListener('click', () => {
       localStorage.removeItem('currentUser');
       localStorage.removeItem('loggedInUser');
+      localStorage.removeItem('token');
       alert('Logged out successfully.');
       window.location.href = 'index.html';
     });
