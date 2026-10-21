@@ -222,11 +222,12 @@ app.post('/api/login', async (req, res) => {
 
     clearFails(key);
 
+    const userId = user.user_id || user.id;
+
     // Old plain-text password? Upgrade it to a hash now
     if (!isHash(user.password)) {
       try {
-        const userId = user.user_id || user.id;
-await db.query('UPDATE users SET password = ? WHERE user_id = ?', [await hashSecret(String(password)), userId]);
+        await db.query('UPDATE users SET password = ? WHERE user_id = ? OR id = ?', [await hashSecret(String(password)), userId, userId]);
       } catch (e) {
         console.warn('Could not upgrade password hash. Run migration.sql so users.password is VARCHAR(255).');
       }
@@ -234,7 +235,7 @@ await db.query('UPDATE users SET password = ? WHERE user_id = ?', [await hashSec
 
     res.status(200).json({
       message: 'Login successful!',
-      user: { id: user.id, username: user.username }
+      user: { id: userId, username: user.username }
     });
   } catch (err) {
     console.error('Login error:', err);
@@ -291,10 +292,10 @@ app.post('/api/reset-password', async (req, res) => {
     clearFails(key);
     
     // Hash new password securely
-      const newHash = await hashSecret(String(newPassword));
-      const userId = user.user_id || user.id;
+    const newHash = await hashSecret(String(newPassword));
+    const userId = user.user_id || user.id;
 
-      await db.query('UPDATE users SET password = ? WHERE user_id = ?', [newHash, userId]);
+    await db.query('UPDATE users SET password = ? WHERE user_id = ? OR id = ?', [newHash, userId, userId]);
 
     res.status(200).json({ message: 'Password updated successfully!' });
   } catch (err) {
@@ -318,7 +319,8 @@ app.post('/api/rooms/create', async (req, res) => {
 
   let connection;
   try {
-    const [users] = await db.query('SELECT id FROM users WHERE id = ? LIMIT 1', [userId]);
+    // FIX: Safely check for user_id OR id column depending on schema
+    const [users] = await db.query('SELECT * FROM users WHERE user_id = ? OR id = ? LIMIT 1', [userId, userId]);
     if (!users.length) return res.status(401).json({ message: 'Please log in again.' });
 
     connection = await pool.promise().getConnection();
@@ -737,8 +739,7 @@ app.get('/api/rooms/:code/results', async (req, res) => {
         totalJudges: room.num_judges,
         complete: room.num_judges > 0 && judgesDone >= room.num_judges
       }
-    }
-    );
+    });
   } catch (err) {
     console.error('Results error:', err);
     res.status(500).json({ message: err.message });
