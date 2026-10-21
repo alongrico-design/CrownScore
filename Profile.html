@@ -93,9 +93,9 @@
         <div class="modal-card">
             <h3>Confirm Logout</h3>
             <p>Are you sure you want to log out? Any unsaved changes will be lost.</p>
-            <div class="modal-actions" style="display:flex; gap:12px; justify-content:center; margin-top:20px;">
+            <div class="modal-actions">
                 <button type="button" id="btn-cancel-logout" class="btn-secondary">Cancel</button>
-                <button type="button" id="btn-confirm-logout" class="btn-danger" style="background:#e74c3c; color:#fff; border:none; padding:8px 16px; border-radius:6px; cursor:pointer;">Logout</button>
+                <button type="button" id="btn-confirm-logout" class="btn-danger" style="background:#e74c3c; color:#fff; border:none; padding:10px 20px; border-radius:6px; cursor:pointer; font-weight:600;">Logout</button>
             </div>
         </div>
     </div>
@@ -113,16 +113,19 @@
         });
 
         function initLogoutModalGuard() {
+            // Event delegation on document guarantees capturing click events on .btn-logout
+            document.addEventListener('click', function (e) {
+                const logoutBtn = e.target.closest('.btn-logout');
+                if (logoutBtn) {
+                    e.preventDefault();
+                    const modal = document.getElementById('logout-modal');
+                    if (modal) modal.hidden = false;
+                }
+            });
+
             const modal = document.getElementById('logout-modal');
             const cancelBtn = document.getElementById('btn-cancel-logout');
             const confirmBtn = document.getElementById('btn-confirm-logout');
-
-            document.querySelectorAll('.btn-logout').forEach(btn => {
-                btn.addEventListener('click', (e) => {
-                    e.preventDefault();
-                    if (modal) modal.hidden = false;
-                });
-            });
 
             if (cancelBtn) {
                 cancelBtn.addEventListener('click', () => {

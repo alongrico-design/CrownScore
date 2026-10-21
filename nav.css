@@ -201,3 +201,57 @@ header::after {
     gap: 8px 18px;
   }
 }
+
+/* ==========================================================================
+   GLOBAL LOGOUT CONFIRMATION MODAL STYLES
+   ========================================================================== */
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background: rgba(0, 0, 0, 0.85);
+  backdrop-filter: blur(4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 99999 !important; /* Forces modal over headers and backgrounds */
+}
+
+/* Ensure hidden attribute takes precedence */
+.modal-overlay[hidden] {
+  display: none !important;
+}
+
+.modal-card {
+  background: #1e1e1e;
+  border: 1px solid #d4af37;
+  padding: 28px 32px;
+  border-radius: 12px;
+  max-width: 420px;
+  width: 90%;
+  text-align: center;
+  color: #ffffff;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.8);
+}
+
+.modal-card h3 {
+  color: #d4af37;
+  margin-top: 0;
+  margin-bottom: 12px;
+  font-size: 1.4rem;
+}
+
+.modal-card p {
+  color: #ccc;
+  font-size: 0.95rem;
+  line-height: 1.5;
+  margin-bottom: 20px;
+}
+
+.modal-actions {
+  display: flex;
+  gap: 12px;
+  justify-content: center;
+}
