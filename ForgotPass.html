@@ -108,7 +108,9 @@
 
     <script src="CrownScore.js"></script>
     <script>
-        window.API_BASE_URL = window.API_BASE_URL || 'http://localhost:3000/api';
+        window.API_BASE_URL = window.API_BASE_URL || ((window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')
+        ? 'http://localhost:3000/api'
+        : 'https://crownscore.onrender.com/api');
 
         const form = document.getElementById('forgotpassword-form');
         const errorEl = document.getElementById('form-error');

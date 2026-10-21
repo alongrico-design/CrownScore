@@ -2,7 +2,9 @@
    room.js - Pageant Room Setup, Judge Authentication & Dynamic Leaderboard
    ========================================================================== */
 
-const API_BASE_URL = 'https://donor-hurry-blatancy.ngrok-free.dev/api';
+const API_BASE_URL = (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')
+  ? 'http://localhost:3000/api'
+  : 'https://crownscore.onrender.com/api';
 
 // --- GLOBAL STATE ---
 let currentRoom = {
