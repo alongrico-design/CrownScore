@@ -2,7 +2,7 @@ require('dotenv').config();
 const express = require('express');
 const mysql = require('mysql2');
 const cors = require('cors');
-const bcrypt = require('bcryptjs');     // npm install bcryptjs
+const bcrypt = require('bcryptjs');
 const crypto = require('crypto');
 
 const app = express();
@@ -57,7 +57,7 @@ async function checkAnswer(plain, stored) {
     : normAnswer(plain) === normAnswer(stored);
 }
 
-// Simple in-memory limiter (resets when the server restarts)
+// In-memory rate limiter
 const attempts = new Map();
 
 function lockedSeconds(key) {
@@ -81,6 +81,12 @@ function generateRoomCode() {
   let code = 'CS-';
   for (const b of bytes) code += CODE_CHARS[b % CODE_CHARS.length];
   return code;
+}
+
+// Extract primary key regardless of whether schema names it user_id or id
+function extractUserId(userRow) {
+  if (!userRow) return null;
+  return userRow.user_id !== undefined ? userRow.user_id : userRow.id;
 }
 
 async function getParticipant(roomId, userId) {
@@ -160,7 +166,6 @@ function checkSetup({ roomName, password, numJudges, categories, contestants }) 
    1. USER AUTHENTICATION ENDPOINTS
    ========================================================================== */
 
-// Registration: returns the new user so the app can log them straight in
 app.post('/api/register', async (req, res) => {
   const { username, password, recoveryQuestion, recoveryAnswer } = req.body;
 
@@ -197,7 +202,6 @@ app.post('/api/register', async (req, res) => {
   }
 });
 
-// Login: never sends the password back
 app.post('/api/login', async (req, res) => {
   const { username, password } = req.body;
 
@@ -222,20 +226,19 @@ app.post('/api/login', async (req, res) => {
 
     clearFails(key);
 
-    const userId = user.user_id || user.id;
+    const resolvedId = extractUserId(user);
 
-    // Old plain-text password? Upgrade it to a hash now
     if (!isHash(user.password)) {
       try {
-        await db.query('UPDATE users SET password = ? WHERE user_id = ? OR id = ?', [await hashSecret(String(password)), userId, userId]);
+        await db.query('UPDATE users SET password = ? WHERE user_id = ?', [await hashSecret(String(password)), resolvedId]);
       } catch (e) {
-        console.warn('Could not upgrade password hash. Run migration.sql so users.password is VARCHAR(255).');
+        console.warn('Could not upgrade password hash.');
       }
     }
 
     res.status(200).json({
       message: 'Login successful!',
-      user: { id: userId, username: user.username }
+      user: { id: resolvedId, username: user.username }
     });
   } catch (err) {
     console.error('Login error:', err);
@@ -243,7 +246,6 @@ app.post('/api/login', async (req, res) => {
   }
 });
 
-// Forgot Password step 2: show the saved question (never the answer)
 app.get('/api/security-question', async (req, res) => {
   const username = String(req.query.username || '').trim();
   if (!username) return res.status(400).json({ message: 'Username is required.' });
@@ -263,7 +265,6 @@ app.get('/api/security-question', async (req, res) => {
   }
 });
 
-// Forgot Password step 3: answer + new password (3 wrong answers = 5 minute lock)
 app.post('/api/reset-password', async (req, res) => {
   const { username, recoveryAnswer, newPassword } = req.body;
 
@@ -291,11 +292,10 @@ app.post('/api/reset-password', async (req, res) => {
 
     clearFails(key);
     
-    // Hash new password securely
     const newHash = await hashSecret(String(newPassword));
-    const userId = user.user_id || user.id;
+    const resolvedId = extractUserId(user);
 
-    await db.query('UPDATE users SET password = ? WHERE user_id = ? OR id = ?', [newHash, userId, userId]);
+    await db.query('UPDATE users SET password = ? WHERE user_id = ?', [newHash, resolvedId]);
 
     res.status(200).json({ message: 'Password updated successfully!' });
   } catch (err) {
@@ -305,10 +305,9 @@ app.post('/api/reset-password', async (req, res) => {
 });
 
 /* ==========================================================================
-   2. ROOM MANAGEMENT (Admin & Judge flows)
+   2. ROOM MANAGEMENT
    ========================================================================== */
 
-// Admin creates a room (room, categories, criteria, candidates)
 app.post('/api/rooms/create', async (req, res) => {
   const { code, roomName, description, password, numJudges, categories, contestants, userId } = req.body;
 
@@ -319,14 +318,13 @@ app.post('/api/rooms/create', async (req, res) => {
 
   let connection;
   try {
-    // FIX: Safely check for user_id OR id column depending on schema
-    const [users] = await db.query('SELECT * FROM users WHERE user_id = ? OR id = ? LIMIT 1', [userId, userId]);
+    // Check user existence using user_id primary key directly
+    const [users] = await db.query('SELECT * FROM users WHERE user_id = ? LIMIT 1', [userId]);
     if (!users.length) return res.status(401).json({ message: 'Please log in again.' });
 
     connection = await pool.promise().getConnection();
     await connection.beginTransaction();
 
-    // 1. Insert room (Room ID is generated here if the suggested one is taken)
     const passwordHash = await hashSecret(String(password));
     let roomId = null;
     let roomCode = '';
@@ -345,13 +343,11 @@ app.post('/api/rooms/create', async (req, res) => {
     }
     if (!roomId) throw new Error('Could not create a unique Room ID. Please try again.');
 
-    // 2. Creator is the room admin
     await connection.query(
       'INSERT INTO room_participants (room_id, user_id, role) VALUES (?, ?, ?)',
       [roomId, userId, 'admin']
     );
 
-    // 3. Categories + criteria (no category weights given = equal share)
     const equalShare = Math.round(10000 / categories.length) / 100;
     const insertedCategories = [];
 
@@ -376,7 +372,6 @@ app.post('/api/rooms/create', async (req, res) => {
       insertedCategories.push({ id: categoryId, name: cat.name, weight: catWeight, criteria: insertedCriteria });
     }
 
-    // 4. Candidates (this room only)
     const insertedContestants = [];
     for (let i = 0; i < contestants.length; i++) {
       const c = contestants[i];
@@ -402,7 +397,6 @@ app.post('/api/rooms/create', async (req, res) => {
   }
 });
 
-// Free / taken judge slots for a Room ID (fills the dropdown on the join screen)
 app.get('/api/room-slots/:code', async (req, res) => {
   const code = String(req.params.code || '').trim().toUpperCase();
   const userId = Number(req.query.userId) || 0;
@@ -428,7 +422,6 @@ app.get('/api/room-slots/:code', async (req, res) => {
   }
 });
 
-// Judge joins a room: Room ID + password + judge slot
 app.post('/api/rooms/join', async (req, res) => {
   const { code, password, userId, judgeNumber } = req.body;
 
@@ -448,7 +441,6 @@ app.post('/api/rooms/join', async (req, res) => {
       return res.status(409).json({ message: 'This room has already ended.' });
     }
 
-    // Room password (rooms made before the upgrade have none)
     if (room.room_password && !(await checkSecret(String(password || ''), room.room_password))) {
       recordFail(key, 5, 30 * 1000);
       return res.status(401).json({ message: 'Invalid Room ID or password.' });
@@ -501,7 +493,6 @@ app.post('/api/rooms/join', async (req, res) => {
   }
 });
 
-// Re-open a room you already belong to (Profile > Manage / Resume)
 app.get('/api/rooms/by-code/:code', async (req, res) => {
   const code = String(req.params.code || '').trim().toUpperCase();
   const userId = Number(req.query.userId) || 0;
@@ -531,7 +522,6 @@ app.get('/api/rooms/by-code/:code', async (req, res) => {
   }
 });
 
-// Admin ends the room (results stay available)
 app.post('/api/rooms/:roomId/complete', async (req, res) => {
   const { userId } = req.body;
   try {
@@ -550,7 +540,6 @@ app.post('/api/rooms/:roomId/complete', async (req, res) => {
    3. SCORES
    ========================================================================== */
 
-// Live scores for the admin dashboard (admin only)
 app.get('/api/rooms/:roomId/scores', async (req, res) => {
   const userId = Number(req.query.userId) || 0;
   try {
@@ -574,7 +563,6 @@ app.get('/api/rooms/:roomId/scores', async (req, res) => {
   }
 });
 
-// One judge's own scores (fills the judge portal)
 app.get('/api/rooms/:roomId/scores/judge/:userId', async (req, res) => {
   try {
     const participant = await getParticipant(req.params.roomId, req.params.userId);
@@ -592,7 +580,6 @@ app.get('/api/rooms/:roomId/scores/judge/:userId', async (req, res) => {
   }
 });
 
-// Save a draft (final:false) or submit + lock (final:true) one candidate's scores
 app.post('/api/scores/submit', async (req, res) => {
   const { roomId, userId, contestantId, scores, final } = req.body;
 
@@ -669,10 +656,9 @@ app.post('/api/scores/submit', async (req, res) => {
 });
 
 /* ==========================================================================
-   4. RESULTS (winners page + export)
+   4. RESULTS
    ========================================================================== */
 
-// Category score = sum(rating x weight / 100) per judge, averaged over judges
 app.get('/api/rooms/:code/results', async (req, res) => {
   const code = String(req.params.code || '').trim().toUpperCase();
   const userId = Number(req.query.userId) || 0;
@@ -699,7 +685,6 @@ app.get('/api/rooms/:code/results', async (req, res) => {
     const critPerCat = {};
     categories.forEach(cat => { critPerCat[cat.id] = cat.criteria.length; });
 
-    // pair = one judge scoring one candidate
     const pairs = {};
     rows.forEach(r => {
       const info = critInfo[r.criteria_id];
@@ -754,14 +739,12 @@ app.get('/api/users/:userId/history', async (req, res) => {
   const userId = req.params.userId;
 
   try {
-    // Rooms created as Admin
     const [adminRooms] = await db.query(
       `SELECT room_id AS id, room_code AS code, room_name, num_judges, status, created_at
        FROM rooms WHERE created_by = ? ORDER BY created_at DESC`,
       [userId]
     );
 
-    // Rooms judged as Judge
     const [judgedRaw] = await db.query(
       `SELECT r.room_id AS id, r.room_code AS code, r.room_name, rp.judge_number,
               MAX(s.submitted_at) AS last_submitted,
@@ -799,5 +782,5 @@ app.get('/api/users/:userId/history', async (req, res) => {
 // Start API Server
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
-  console.log(`CrownScore local API server running on http://localhost:${PORT}`);
+  console.log(`CrownScore API server running on port ${PORT}`);
 });
