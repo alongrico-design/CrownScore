@@ -1,5 +1,5 @@
 /* ==========================================================================
-   room.js - Pageant Room Setup, Judge Authentication & Dynamic Leaderboard
+   room.js - Pageant Room Setup, Kahoot-Style Judging Flow & Live Leaderboard
    ========================================================================== */
 
 const API_BASE_URL = (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')
@@ -21,6 +21,17 @@ let currentRoom = {
 
 let pollInterval = null;
 
+// --- KAHOOT-STYLE WIZARD STATE ---
+let wizardCatIdx = 0;
+let wizardCandIdx = 0;
+let wizardScoreDrafts = {}; // Format: { "contestantId_criteriaId": value }
+let isScoresLocked = false;
+
+// Initialize Logout Guard on DOM load
+document.addEventListener('DOMContentLoaded', () => {
+  initLogoutModalGuard();
+});
+
 // --- USER HELPER ---
 function getLoggedInUser() {
   try {
@@ -28,6 +39,33 @@ function getLoggedInUser() {
     return user || null;
   } catch (e) {
     return null;
+  }
+}
+
+// --- LOGOUT CONFIRMATION MODAL ---
+function initLogoutModalGuard() {
+  const modal = document.getElementById('logout-modal');
+  const cancelBtn = document.getElementById('btn-cancel-logout');
+  const confirmBtn = document.getElementById('btn-confirm-logout');
+
+  document.querySelectorAll('.btn-logout').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      e.preventDefault();
+      if (modal) modal.hidden = false;
+    });
+  });
+
+  if (cancelBtn) {
+    cancelBtn.addEventListener('click', () => {
+      if (modal) modal.hidden = true;
+    });
+  }
+
+  if (confirmBtn) {
+    confirmBtn.addEventListener('click', () => {
+      localStorage.removeItem('currentUser');
+      window.location.href = 'index.html';
+    });
   }
 }
 
@@ -138,7 +176,6 @@ async function handleAdminSubmit(e) {
   const roomPassword = document.getElementById('roomPassword').value.trim();
   const numJudges = parseInt(document.getElementById('numJudges').value, 10);
 
-  // Parse Categories & Criteria
   const categoryBlocks = document.querySelectorAll('.category-block');
   let parsedCategories = [];
 
@@ -171,7 +208,6 @@ async function handleAdminSubmit(e) {
     return;
   }
 
-  // Parse Contestants from candidate rows
   const candidateRows = document.querySelectorAll('#contestant-container .candidate-row');
   let parsedContestants = [];
 
@@ -223,7 +259,6 @@ async function handleAdminSubmit(e) {
     currentRoom.categories = result.categories;
     currentRoom.contestants = result.contestants;
 
-    // Start live polling & view dashboard
     startLiveScorePolling();
     renderAdminDashboard();
 
@@ -266,7 +301,6 @@ function renderAdminDashboard() {
   if (contestantsEl) contestantsEl.textContent = currentRoom.contestants.length;
   if (judgesEl) judgesEl.textContent = currentRoom.numJudges;
 
-  // Track judge submission status
   const judgesList = document.getElementById('judges-status-list');
   if (judgesList) {
     judgesList.innerHTML = '';
@@ -288,7 +322,6 @@ function renderAdminDashboard() {
     }
   }
 
-  // Table Headers
   const tableHead = document.getElementById('scores-table-head');
   if (tableHead) {
     let headHTML = `<tr><th>Rank</th><th>Candidate</th>`;
@@ -351,7 +384,6 @@ function renderLeaderboardRows() {
     };
   });
 
-  // Rank by highest average
   contestantResults.sort((a, b) => b.finalAverage - a.finalAverage);
 
   contestantResults.forEach((res, rankIdx) => {
@@ -411,7 +443,7 @@ async function handleJudgeLogin(e) {
     currentRoom.contestants = room.contestants;
     currentRoom.activeJudgeNumber = room.judgeNumber || selectedJudge;
 
-    await renderJudgePortal();
+    await initKahootStylePortal();
     hideAllViews();
     document.getElementById('judge-portal-view').classList.remove('hidden');
 
@@ -421,93 +453,182 @@ async function handleJudgeLogin(e) {
   }
 }
 
-// --- RENDER DYNAMIC JUDGE PORTAL ---
-async function renderJudgePortal() {
-  const portal = document.getElementById('judge-portal-view');
+// --- KAHOOT-STYLE SEQUENTIAL PORTAL LOGIC ---
+async function initKahootStylePortal() {
   const user = getLoggedInUser();
   const judgeNum = currentRoom.activeJudgeNumber;
 
-  let scoreMap = {};
-  let isLocked = false;
+  document.getElementById('judge-portal-title').textContent = `Judge #${judgeNum} Scoring Portal`;
+
+  wizardCatIdx = 0;
+  wizardCandIdx = 0;
+  wizardScoreDrafts = {};
+  isScoresLocked = false;
 
   try {
     const res = await fetch(`${API_BASE_URL}/rooms/${currentRoom.id}/scores/judge/${user.id}`);
     if (res.ok) {
       const existingScores = await res.json();
       existingScores.forEach(s => {
-        scoreMap[`${s.contestant_id}_${s.criteria_id}`] = s.score;
-        if (s.is_final) isLocked = true;
+        wizardScoreDrafts[`${s.contestant_id}_${s.criteria_id}`] = s.score;
+        if (s.is_final) isScoresLocked = true;
       });
     }
   } catch (err) {
-    console.error("Error fetching judge existing scores:", err);
+    console.error("Error fetching existing judge scores:", err);
   }
 
-  let portalHTML = `
-    <div class="portal-header">
-      <h2>Judge #${judgeNum} Scoring Portal</h2>
-      <button class="btn-back" onclick="resetToRoleSelection()">Exit Room</button>
-    </div>
-    <p class="subtitle" style="margin-bottom:1.5rem;">
-      ${isLocked ? '<strong style="color:#2ecc71;">✓ Your official scores are submitted and locked.</strong>' : 'Enter scores (0-100) for each candidate per criterion.'}
-    </p>
-    <form onsubmit="handleJudgeScoreSubmit(event, true)">
-  `;
+  const lockBanner = document.getElementById('judge-locked-banner');
+  if (lockBanner) lockBanner.hidden = !isScoresLocked;
 
-  currentRoom.contestants.forEach(contestant => {
-    portalHTML += `
-      <div class="scoring-card">
-        <h3>Candidate #${contestant.number} — ${contestant.name} ${contestant.representation ? `<span style="font-weight:normal; font-size:0.9rem; color:#aaa;">(${contestant.representation})</span>` : ''}</h3>
+  document.getElementById('judging-summary-card').hidden = true;
+  document.getElementById('judging-active-card').hidden = false;
+  document.getElementById('wizard-progress-bar').hidden = false;
+
+  renderWizardStep();
+}
+
+function saveActiveCardInputs() {
+  const currentCat = currentRoom.categories[wizardCatIdx];
+  const currentCand = currentRoom.contestants[wizardCandIdx];
+  if (!currentCat || !currentCand) return;
+
+  currentCat.criteria.forEach(crit => {
+    const input = document.getElementById(`wizard-crit-${crit.id}`);
+    if (input) {
+      const val = parseFloat(input.value);
+      wizardScoreDrafts[`${currentCand.id}_${crit.id}`] = isNaN(val) ? '' : val;
+    }
+  });
+}
+
+function renderWizardStep() {
+  const cats = currentRoom.categories;
+  const cands = currentRoom.contestants;
+
+  const currentCat = cats[wizardCatIdx];
+  const currentCand = cands[wizardCandIdx];
+
+  // Progress Bar updates
+  const totalSteps = cats.length * cands.length;
+  const currentStepNum = (wizardCatIdx * cands.length) + wizardCandIdx + 1;
+  const progressPct = (currentStepNum / totalSteps) * 100;
+
+  document.getElementById('wizard-progress-fill').style.width = `${progressPct}%`;
+  document.getElementById('cat-progress-label').textContent = `Category ${wizardCatIdx + 1} of ${cats.length}: ${currentCat.name}`;
+  document.getElementById('cand-progress-label').textContent = `Candidate ${wizardCandIdx + 1} of ${cands.length}`;
+
+  // Active Card Information
+  document.getElementById('active-cat-badge').textContent = currentCat.name;
+  document.getElementById('active-cand-title').textContent = `Candidate #${currentCand.number || currentCand.contestant_number} — ${currentCand.name}`;
+  document.getElementById('active-cand-rep').textContent = currentCand.representation || '';
+
+  // Render Sub-Criteria Fields
+  const container = document.getElementById('active-criteria-fields');
+  container.innerHTML = '';
+
+  currentCat.criteria.forEach(crit => {
+    const key = `${currentCand.id}_${crit.id}`;
+    const savedVal = wizardScoreDrafts[key] !== undefined ? wizardScoreDrafts[key] : '';
+
+    const field = document.createElement('div');
+    field.className = 'form-group';
+    field.style.marginBottom = '12px';
+    field.innerHTML = `
+      <div style="display:flex; justify-content:space-between; margin-bottom:4px;">
+        <label style="color:#fff; font-weight:600;">${crit.name}</label>
+        <span style="color:#d4af37; font-size:0.8rem; background:#222; padding:2px 6px; border-radius:4px;">${crit.weight}%</span>
+      </div>
+      <input type="number" id="wizard-crit-${crit.id}" class="score-input" min="0" max="100" step="0.1" 
+             placeholder="Enter score 0-100" value="${savedVal}" ${isScoresLocked ? 'disabled' : ''} required>
     `;
-
-    currentRoom.categories.forEach(category => {
-      portalHTML += `
-        <div style="margin-top: 1rem; border-top: 1px dashed #333; padding-top: 0.5rem;">
-          <h4 style="color: #d4af37; font-size: 0.95rem; text-transform: uppercase;">${category.name}</h4>
-          <div class="scoring-grid" style="margin-top: 0.5rem;">
-      `;
-
-      if (category.criteria) {
-        category.criteria.forEach(crit => {
-          const key = `${contestant.id}_${crit.id}`;
-          const currentVal = scoreMap[key] !== undefined ? scoreMap[key] : '';
-
-          portalHTML += `
-            <div class="score-field">
-              <label>${crit.name} <span class="criteria-badge">${crit.weight}%</span></label>
-              <input type="number" min="0" max="100" step="0.1" placeholder="0-100" 
-                     data-contestant="${contestant.id}" data-criteria="${crit.id}" 
-                     value="${currentVal}" ${isLocked ? 'disabled' : ''} required>
-            </div>
-          `;
-        });
-      }
-
-      portalHTML += `
-          </div>
-        </div>
-      `;
-    });
-
-    portalHTML += `</div>`;
+    container.appendChild(field);
   });
 
-  if (!isLocked) {
-    portalHTML += `
-      <div style="display:flex; gap:1rem; margin-top:1.5rem;">
-        <button type="button" class="btn-secondary" onclick="handleJudgeScoreSubmit(event, false)">Save Draft</button>
-        <button type="submit" class="btn-primary">Submit Final Scores</button>
-      </div>
-    `;
-  }
+  // Controls
+  const prevBtn = document.getElementById('btn-wizard-prev');
+  if (prevBtn) prevBtn.disabled = (wizardCatIdx === 0 && wizardCandIdx === 0);
+}
 
-  portalHTML += `</form>`;
-  portal.innerHTML = portalHTML;
+function wizardNextCandidate() {
+  saveActiveCardInputs();
+
+  const cats = currentRoom.categories;
+  const cands = currentRoom.contestants;
+
+  if (wizardCandIdx < cands.length - 1) {
+    wizardCandIdx++;
+    renderWizardStep();
+  } else if (wizardCatIdx < cats.length - 1) {
+    wizardCatIdx++;
+    wizardCandIdx = 0; // Reset to candidate #1 for next category
+    renderWizardStep();
+  } else {
+    // Show summary overview table when all categories & candidates are complete
+    renderWizardSummaryTable();
+  }
+}
+
+function wizardPrevCandidate() {
+  saveActiveCardInputs();
+
+  const cands = currentRoom.contestants;
+
+  if (wizardCandIdx > 0) {
+    wizardCandIdx--;
+    renderWizardStep();
+  } else if (wizardCatIdx > 0) {
+    wizardCatIdx--;
+    wizardCandIdx = cands.length - 1; // Go to last candidate of previous category
+    renderWizardStep();
+  }
+}
+
+function renderWizardSummaryTable() {
+  document.getElementById('judging-active-card').hidden = true;
+  document.getElementById('wizard-progress-bar').hidden = true;
+  const summaryCard = document.getElementById('judging-summary-card');
+  summaryCard.hidden = false;
+
+  let html = `<table class="results-table" style="width:100%; border-collapse:collapse;">
+    <thead>
+      <tr>
+        <th>Candidate</th>
+        ${currentRoom.categories.map(c => `<th>${c.name}</th>`).join('')}
+      </tr>
+    </thead>
+    <tbody>`;
+
+  currentRoom.contestants.forEach(cand => {
+    html += `<tr>
+      <td><strong>#${cand.number || cand.contestant_number} ${cand.name}</strong></td>`;
+    
+    currentRoom.categories.forEach(cat => {
+      let catWeightedTotal = 0;
+      cat.criteria.forEach(crit => {
+        const score = parseFloat(wizardScoreDrafts[`${cand.id}_${crit.id}`]) || 0;
+        catWeightedTotal += score * (crit.weight / 100);
+      });
+      html += `<td style="text-align:center;">${catWeightedTotal.toFixed(2)}</td>`;
+    });
+    html += `</tr>`;
+  });
+
+  html += `</tbody></table>`;
+  document.getElementById('summary-table-container').innerHTML = html;
+}
+
+function returnToWizardEditing() {
+  document.getElementById('judging-summary-card').hidden = true;
+  document.getElementById('judging-active-card').hidden = false;
+  document.getElementById('wizard-progress-bar').hidden = false;
+  renderWizardStep();
 }
 
 // --- SUBMIT JUDGE SCORES ---
 async function handleJudgeScoreSubmit(e, isFinal) {
   if (e) e.preventDefault();
+  saveActiveCardInputs();
 
   const user = getLoggedInUser();
   if (!user || !user.id) {
@@ -515,18 +636,19 @@ async function handleJudgeScoreSubmit(e, isFinal) {
     return;
   }
 
-  const inputs = document.querySelectorAll('#judge-portal-view input[type="number"]');
   const candidateGrouped = {};
 
-  inputs.forEach(input => {
-    const contestantId = input.getAttribute('data-contestant');
-    const criteriaId = input.getAttribute('data-criteria');
-    const scoreVal = parseFloat(input.value) || 0;
-
-    if (!candidateGrouped[contestantId]) candidateGrouped[contestantId] = [];
-    candidateGrouped[contestantId].push({
-      criteriaId: parseInt(criteriaId, 10),
-      score: scoreVal
+  currentRoom.contestants.forEach(cand => {
+    candidateGrouped[cand.id] = [];
+    currentRoom.categories.forEach(cat => {
+      cat.criteria.forEach(crit => {
+        const key = `${cand.id}_${crit.id}`;
+        const scoreVal = parseFloat(wizardScoreDrafts[key]) || 0;
+        candidateGrouped[cand.id].push({
+          criteriaId: parseInt(crit.id, 10),
+          score: scoreVal
+        });
+      });
     });
   });
 

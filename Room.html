@@ -17,7 +17,7 @@
 </head>
 <body>
 
-    <!-- NAVIGATION (identical on every page; only the "active" link changes) -->
+    <!-- NAVIGATION -->
     <header>
         <nav class="navbar" aria-label="Main">
             <div class="logo-container">
@@ -29,10 +29,22 @@
                 <a href="Room.html" class="active" aria-current="page">Room</a>
                 <a href="Profile.html">Profile</a>
                 <a href="Guide.html">Guide</a>
-                <a href="index.html" class="btn-logout" onclick="localStorage.removeItem('currentUser')">Logout</a>
+                <a href="index.html" class="btn-logout">Logout</a>
             </div>
         </nav>
     </header>
+
+    <!-- LOGOUT CONFIRMATION MODAL -->
+    <div id="logout-modal" class="modal-overlay" hidden>
+        <div class="modal-card">
+            <h3>Confirm Logout</h3>
+            <p>Are you sure you want to log out? Any unsaved score drafts in progress will be lost.</p>
+            <div class="modal-actions" style="display:flex; gap:12px; justify-content:center; margin-top:20px;">
+                <button type="button" id="btn-cancel-logout" class="btn-secondary">Cancel</button>
+                <button type="button" id="btn-confirm-logout" class="btn-danger" style="background:#e74c3c; color:#fff; border:none; padding:8px 16px; border-radius:6px; cursor:pointer;">Logout</button>
+            </div>
+        </div>
+    </div>
 
     <main>
         <!-- STEP 1: Role Selection View -->
@@ -114,7 +126,7 @@
                     <button type="button" class="btn-secondary full-width-btn" onclick="addCategoryInput()">+ Add Category/Segment</button>
                 </section>
 
-                <!-- 3. Candidate roster (belongs to this room only) -->
+                <!-- 3. Candidate roster -->
                 <section>
                     <h2>3. Candidate Roster</h2>
                     <p class="hint">Candidates exist only inside this room.</p>
@@ -162,7 +174,6 @@
                 </div>
             </div>
 
-            <!-- Summary Bar -->
             <div class="summary-cards-grid">
                 <div class="stat-card">
                     <span class="stat-title">Contestants</span>
@@ -178,25 +189,17 @@
                 </div>
             </div>
 
-            <!-- Judge Submission Status Tracker -->
             <div class="dashboard-section">
                 <h3>Judges Submission Status</h3>
-                <div class="judges-status-list" id="judges-status-list">
-                    <!-- Populated dynamically via room.js -->
-                </div>
+                <div class="judges-status-list" id="judges-status-list"></div>
             </div>
 
-            <!-- Live Scoring Leaderboard Table -->
             <div class="dashboard-section">
                 <h3>Live Contestant Rankings & Weighted Scores Breakdown</h3>
                 <div class="table-responsive">
                     <table class="results-table">
-                        <thead id="scores-table-head">
-                            <!-- Injected dynamically by room.js -->
-                        </thead>
-                        <tbody id="scores-table-body">
-                            <!-- Injected dynamically by room.js -->
-                        </tbody>
+                        <thead id="scores-table-head"></thead>
+                        <tbody id="scores-table-body"></tbody>
                     </table>
                 </div>
             </div>
@@ -231,15 +234,58 @@
             </form>
         </div>
 
-        <!-- STEP 3B: Judge Scoring Portal -->
+        <!-- STEP 3B: KAHOOT-STYLE SEQUENTIAL JUDGE PORTAL -->
         <div id="judge-portal-view" class="card-container width-wide hidden">
-            <!-- Dynamically populated by room.js -->
+            <div class="portal-header" style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1rem;">
+                <h2 id="judge-portal-title">Judge Scoring Portal</h2>
+                <button type="button" class="btn-back" onclick="resetToRoleSelection()">Exit Room</button>
+            </div>
+
+            <div id="judge-locked-banner" hidden style="background:rgba(46, 204, 113, 0.15); border:1px solid #2ecc71; padding:12px; border-radius:8px; margin-bottom:1rem; color:#2ecc71; font-weight:bold;">
+                ✓ Your official scores are submitted and locked.
+            </div>
+
+            <div id="wizard-progress-bar" class="wizard-progress" style="margin-bottom:1.5rem;">
+                <div style="width:100%; height:8px; background:#222; border-radius:4px; overflow:hidden;">
+                    <div id="wizard-progress-fill" style="height:100%; width:0%; background:linear-gradient(90deg, #d4af37, #f3e5ab); transition:width 0.3s ease;"></div>
+                </div>
+                <div style="display:flex; justify-content:space-between; font-size:0.85rem; color:#aaa; margin-top:6px;">
+                    <span id="cat-progress-label">Category 1 of 1</span>
+                    <span id="cand-progress-label">Candidate 1 of 1</span>
+                </div>
+            </div>
+
+            <div id="judging-active-card" class="scoring-card">
+                <div style="margin-bottom:1rem;">
+                    <span id="active-cat-badge" style="background:#d4af37; color:#000; font-size:0.75rem; font-weight:bold; padding:3px 8px; border-radius:4px; text-transform:uppercase;">Category Name</span>
+                    <h2 id="active-cand-title" style="margin-top:8px; font-size:1.4rem; color:#fff;">Candidate Name</h2>
+                    <p id="active-cand-rep" style="color:#aaa; font-size:0.9rem; margin:0;">Representation</p>
+                </div>
+
+                <div id="active-criteria-fields"></div>
+
+                <div style="display:flex; justify-content:space-between; margin-top:1.5rem; gap:12px;">
+                    <button type="button" id="btn-wizard-prev" class="btn-secondary" onclick="wizardPrevCandidate()">← Previous</button>
+                    <button type="button" id="btn-wizard-next" class="btn-primary" onclick="wizardNextCandidate()">Next Candidate →</button>
+                </div>
+            </div>
+
+            <div id="judging-summary-card" class="scoring-card" hidden>
+                <h3 style="color:#d4af37; margin-bottom:0.5rem;">Review & Submit Official Tabulation</h3>
+                <p style="color:#aaa; font-size:0.9rem; margin-bottom:1rem;">Review your scores below before submitting. Submitting will lock your entries for this pageant.</p>
+
+                <div id="summary-table-container" class="table-responsive" style="margin-bottom:1.5rem;"></div>
+
+                <div style="display:flex; gap:12px; justify-content:flex-end;">
+                    <button type="button" class="btn-secondary" onclick="returnToWizardEditing()">← Back & Edit Scores</button>
+                    <button type="button" class="btn-secondary" onclick="handleJudgeScoreSubmit(event, false)">Save Draft</button>
+                    <button type="button" class="btn-primary" onclick="handleJudgeScoreSubmit(event, true)">Submit Final Scores 🔒</button>
+                </div>
+            </div>
         </div>
     </main>
 
-
     <script src="room.js"></script>
-    <!-- Setup helpers: auto Room ID, weight meters, candidate roster. Keep AFTER room.js -->
     <script src="room-setup.js"></script>
     <script src="stage.js"></script>
 </body>

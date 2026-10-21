@@ -17,7 +17,7 @@
 </head>
 <body>
 
-    <!-- NAVIGATION (identical on every page; only the "active" link changes) -->
+    <!-- NAVIGATION -->
     <header>
         <nav class="navbar" aria-label="Main">
             <div class="logo-container">
@@ -29,7 +29,7 @@
                 <a href="Room.html">Room</a>
                 <a href="Profile.html" class="active" aria-current="page">Profile</a>
                 <a href="Guide.html">Guide</a>
-                <a href="index.html" class="btn-logout" onclick="localStorage.removeItem('currentUser')">Logout</a>
+                <a href="index.html" class="btn-logout">Logout</a>
             </div>
         </nav>
     </header>
@@ -88,6 +88,18 @@
 
     </main>
 
+    <!-- LOGOUT CONFIRMATION MODAL -->
+    <div id="logout-modal" class="modal-overlay" hidden>
+        <div class="modal-card">
+            <h3>Confirm Logout</h3>
+            <p>Are you sure you want to log out? Any unsaved changes will be lost.</p>
+            <div class="modal-actions" style="display:flex; gap:12px; justify-content:center; margin-top:20px;">
+                <button type="button" id="btn-cancel-logout" class="btn-secondary">Cancel</button>
+                <button type="button" id="btn-confirm-logout" class="btn-danger" style="background:#e74c3c; color:#fff; border:none; padding:8px 16px; border-radius:6px; cursor:pointer;">Logout</button>
+            </div>
+        </div>
+    </div>
+
     <script>
         const API_BASE_URL = (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') ? 'http://localhost:3000/api' : 'https://crownscore.onrender.com/api';
 
@@ -97,9 +109,35 @@
         document.addEventListener('DOMContentLoaded', () => {
             setupTabs();
             loadUserProfile();
+            initLogoutModalGuard();
         });
 
-        // Escape anything coming from the server before putting it in HTML
+        function initLogoutModalGuard() {
+            const modal = document.getElementById('logout-modal');
+            const cancelBtn = document.getElementById('btn-cancel-logout');
+            const confirmBtn = document.getElementById('btn-confirm-logout');
+
+            document.querySelectorAll('.btn-logout').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    if (modal) modal.hidden = false;
+                });
+            });
+
+            if (cancelBtn) {
+                cancelBtn.addEventListener('click', () => {
+                    if (modal) modal.hidden = true;
+                });
+            }
+
+            if (confirmBtn) {
+                confirmBtn.addEventListener('click', () => {
+                    localStorage.removeItem('currentUser');
+                    window.location.href = 'index.html';
+                });
+            }
+        }
+
         function esc(value) {
             const div = document.createElement('div');
             div.textContent = value == null ? '' : String(value);
@@ -155,7 +193,6 @@
             }
         }
 
-        // Role status + stat cards
         function updateHeader(user) {
             let role = user.role;
             if (!role) {
@@ -184,7 +221,6 @@
             return rooms.filter(r => (`${r.name || r.room_name || ''} ${r.code || ''}`).toLowerCase().includes(q));
         }
 
-        // ---------- Admin Events ----------
         function renderAdminHistory(rooms, hasAny) {
             const container = document.getElementById('admin-rooms-list');
             container.innerHTML = '';
@@ -225,7 +261,6 @@
                 });
         }
 
-        // ---------- Judged Events ----------
         function renderJudgedHistory(rooms, hasAny) {
             const container = document.getElementById('judged-rooms-list');
             container.innerHTML = '';
@@ -266,7 +301,6 @@
                 });
         }
 
-        // ---------- Tabs + search ----------
         function setupTabs() {
             const tabs = [document.getElementById('tab-admin'), document.getElementById('tab-judged')];
             const panels = [document.getElementById('panel-admin'), document.getElementById('panel-judged')];

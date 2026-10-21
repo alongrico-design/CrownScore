@@ -20,7 +20,7 @@
 </head>
 <body class="home">
 
-  <!-- NAVIGATION (identical on every page; only the "active" link changes) -->
+  <!-- NAVIGATION -->
   <header>
     <nav class="navbar" aria-label="Main">
       <div class="logo-container">
@@ -32,13 +32,12 @@
         <a href="Room.html">Room</a>
         <a href="Profile.html">Profile</a>
         <a href="Guide.html">Guide</a>
-        <a href="index.html" class="btn-logout" onclick="localStorage.removeItem('currentUser')">Logout</a>
+        <a href="index.html" class="btn-logout">Logout</a>
       </div>
     </nav>
   </header>
 
   <main class="hero-section">
-
     <section class="hero-content">
       <img src="Logo-Cscore.png" alt="CrownScore Logo" class="hero-logo">
       <div class="descript">
@@ -65,9 +64,47 @@
         <p>Set up and run your pageant events in one place.</p>
       </article>
     </section>
-
   </main>
 
+  <!-- LOGOUT CONFIRMATION MODAL -->
+  <div id="logout-modal" class="modal-overlay" hidden>
+    <div class="modal-card">
+      <h3>Confirm Logout</h3>
+      <p>Are you sure you want to log out? Any unsaved score drafts in progress will be lost.</p>
+      <div class="modal-actions" style="display:flex; gap:12px; justify-content:center; margin-top:20px;">
+        <button type="button" id="btn-cancel-logout" class="btn-secondary">Cancel</button>
+        <button type="button" id="btn-confirm-logout" class="btn-danger" style="background:#e74c3c; color:#fff; border:none; padding:8px 16px; border-radius:6px; cursor:pointer;">Logout</button>
+      </div>
+    </div>
+  </div>
+
   <script src="stage.js"></script>
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      const modal = document.getElementById('logout-modal');
+      const cancelBtn = document.getElementById('btn-cancel-logout');
+      const confirmBtn = document.getElementById('btn-confirm-logout');
+
+      document.querySelectorAll('.btn-logout').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+          e.preventDefault();
+          if (modal) modal.hidden = false;
+        });
+      });
+
+      if (cancelBtn) {
+        cancelBtn.addEventListener('click', () => {
+          if (modal) modal.hidden = true;
+        });
+      }
+
+      if (confirmBtn) {
+        confirmBtn.addEventListener('click', () => {
+          localStorage.removeItem('currentUser');
+          window.location.href = 'index.html';
+        });
+      }
+    });
+  </script>
 </body>
 </html>
