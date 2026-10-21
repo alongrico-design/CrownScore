@@ -17,9 +17,9 @@
 (function () {
   'use strict';
 
-var API_BASE_URL = (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')
-  ? 'http://localhost:3000/api'
-  : 'https://crownscore.onrender.com/api';
+  var API_BASE_URL = (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')
+    ? 'http://localhost:3000/api'
+    : 'https://crownscore.onrender.com/api';
 
   var PLACES = [
     { ordinal: '1st', label: 'Queen' },
@@ -97,7 +97,7 @@ var API_BASE_URL = (window.location.hostname === 'localhost' || window.location.
     document.title = data.room.name + ' | Results | CrownScore';
     document.getElementById('event-name').textContent = data.room.name || 'Pageant Results';
     document.getElementById('event-meta').textContent =
-      [data.room.code ? 'Room ' + data.room.code : '', fmtDate(data.room.date)].filter(Boolean).join('  \u00B7  ');
+      [data.room.code ? 'Room ' + data.room.code : '', fmtDate(data.room.date)].filter(Boolean).join('  ·  ');
 
     renderPodium(ranked);
     renderAwards(data, ranked);
@@ -147,7 +147,7 @@ var API_BASE_URL = (window.location.hostname === 'localhost' || window.location.
       card.appendChild(el('h3', null, best.c.name));
 
       var p = el('p');
-      p.appendChild(document.createTextNode('No. ' + best.c.number + ' \u00B7 score '));
+      p.appendChild(document.createTextNode('No. ' + best.c.number + ' · score '));
       p.appendChild(el('strong', null, r2(Number(best.c.scores[cat.id]) || 0).toFixed(2)));
       card.appendChild(p);
 
@@ -260,7 +260,14 @@ var API_BASE_URL = (window.location.hostname === 'localhost' || window.location.
       return;
     }
 
-    fetch(API_BASE_URL + '/rooms/' + encodeURIComponent(code) + '/results', {
+    // Retrieve logged-in user from localStorage to fulfill backend authentication
+    var currentUser = {};
+    try {
+      currentUser = JSON.parse(localStorage.getItem('currentUser') || '{}');
+    } catch (e) {}
+    var userId = currentUser.id || currentUser.user_id || 0;
+
+    fetch(API_BASE_URL + '/rooms/' + encodeURIComponent(code) + '/results?userId=' + userId, {
       headers: { 'ngrok-skip-browser-warning': 'true' }
     })
       .then(function (res) {
