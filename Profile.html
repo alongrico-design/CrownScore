@@ -1,0 +1,299 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Profile | CrownScore</title>
+
+    <link rel="icon" type="image/png" href="logof.png">
+
+    <!-- Shared navigation (same on every page). Keep FIRST -->
+    <link rel="stylesheet" href="nav.css">
+    <!-- Shared stage background (beams + sparkles) -->
+    <link rel="stylesheet" href="stage.css">
+    <!-- Page-only styles -->
+    <link rel="stylesheet" href="profile.css">
+    <link rel="stylesheet" href="profile-extra.css">
+</head>
+<body>
+
+    <!-- NAVIGATION (identical on every page; only the "active" link changes) -->
+    <header>
+        <nav class="navbar" aria-label="Main">
+            <div class="logo-container">
+                <img src="logof.png" alt="CrownScore Logo" class="nav-logo">
+                <span class="brand-title">CrownScore</span>
+            </div>
+            <div class="navbar-links">
+                <a href="CrownScore.html">Home</a>
+                <a href="Room.html">Room</a>
+                <a href="Profile.html" class="active" aria-current="page">Profile</a>
+                <a href="Guide.html">Guide</a>
+                <a href="index.html" class="btn-logout" onclick="localStorage.removeItem('currentUser')">Logout</a>
+            </div>
+        </nav>
+    </header>
+
+    <main class="profile-main">
+
+        <!-- PROFILE HEADER -->
+        <section class="profile-card">
+            <div class="profile-avatar">
+                <span id="user-initial">U</span>
+            </div>
+            <div class="profile-info">
+                <h2 id="profile-username">Loading...</h2>
+                <span class="profile-handle" id="profile-handle"></span>
+                <div class="role-line">
+                    <p class="user-role-badge" id="role-badge">Verified Account</p>
+                </div>
+                <p class="joined-date">Member of CrownScore Pageant Platform</p>
+            </div>
+            <div class="profile-stats" aria-label="Participation summary">
+                <div class="stat"><span class="stat-num" id="stat-admin">0</span><span class="stat-label">Rooms created</span></div>
+                <div class="stat"><span class="stat-num" id="stat-judged">0</span><span class="stat-label">Events judged</span></div>
+                <div class="stat"><span class="stat-num" id="stat-total">0</span><span class="stat-label">Sessions</span></div>
+            </div>
+        </section>
+
+        <!-- EVENT HISTORY (tabbed) -->
+        <section class="history-section">
+            <div class="tabs-bar">
+                <div class="tabs" role="tablist" aria-label="Event history">
+                    <button class="tab" role="tab" id="tab-admin" aria-selected="true" aria-controls="panel-admin">
+                        👑 Admin Events <span class="count" id="count-admin">0</span>
+                    </button>
+                    <button class="tab" role="tab" id="tab-judged" aria-selected="false" aria-controls="panel-judged" tabindex="-1">
+                        ⚖️ Judged Events <span class="count" id="count-judged">0</span>
+                    </button>
+                </div>
+                <input type="search" id="event-search" class="event-search"
+                       placeholder="Search by room name or code" aria-label="Search events">
+            </div>
+
+            <div role="tabpanel" id="panel-admin" aria-labelledby="tab-admin">
+                <p class="section-desc">Pageant rooms you created and manage.</p>
+                <div id="admin-rooms-list" class="event-list">
+                    <p class="empty-state">Loading history...</p>
+                </div>
+            </div>
+
+            <div role="tabpanel" id="panel-judged" aria-labelledby="tab-judged" hidden>
+                <p class="section-desc">Pageants where you took part as a panel judge.</p>
+                <div id="judged-rooms-list" class="event-list">
+                    <p class="empty-state">Loading history...</p>
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <script>
+        const API_BASE_URL = 'https://donor-hurry-blatancy.ngrok-free.dev/api';
+
+        let adminRooms = [];
+        let judgedRooms = [];
+
+        document.addEventListener('DOMContentLoaded', () => {
+            setupTabs();
+            loadUserProfile();
+        });
+
+        // Escape anything coming from the server before putting it in HTML
+        function esc(value) {
+            const div = document.createElement('div');
+            div.textContent = value == null ? '' : String(value);
+            return div.innerHTML;
+        }
+
+        function fmtDate(value) {
+            if (!value) return '-';
+            const d = new Date(value);
+            return isNaN(d) ? '-' : d.toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
+        }
+
+        function fmtDateTime(value) {
+            if (!value) return '-';
+            const d = new Date(value);
+            return isNaN(d) ? '-' : d.toLocaleString('en-US', {
+                year: 'numeric', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit'
+            });
+        }
+
+        async function loadUserProfile() {
+            const storedUser = localStorage.getItem('currentUser');
+
+            if (!storedUser) {
+                alert("Please log in to view your profile.");
+                window.location.href = 'index.html';
+                return;
+            }
+
+            const user = JSON.parse(storedUser);
+            const name = user.username || 'User';
+
+            document.getElementById('profile-username').textContent = name;
+            document.getElementById('profile-handle').textContent = '@' + name;
+            document.getElementById('user-initial').textContent = name.charAt(0).toUpperCase();
+
+            try {
+                const response = await fetch(`${API_BASE_URL}/users/${user.id}/history`);
+                if (!response.ok) throw new Error('Failed to fetch history');
+
+                const data = await response.json();
+                adminRooms = data.adminRooms || [];
+                judgedRooms = data.judgedRooms || [];
+
+                updateHeader(user);
+                renderAll();
+
+            } catch (err) {
+                console.error("Profile load error:", err);
+                const msg = `<p class="empty-state">Error loading history. Please refresh and try again.</p>`;
+                document.getElementById('admin-rooms-list').innerHTML = msg;
+                document.getElementById('judged-rooms-list').innerHTML = msg;
+            }
+        }
+
+        // Role status + stat cards
+        function updateHeader(user) {
+            let role = user.role;
+            if (!role) {
+                if (adminRooms.length && judgedRooms.length) role = 'Admin & Judge';
+                else if (adminRooms.length) role = 'Admin';
+                else if (judgedRooms.length) role = 'Judge';
+                else role = 'Verified Account';
+            }
+            document.getElementById('role-badge').textContent = role;
+
+            document.getElementById('stat-admin').textContent = adminRooms.length;
+            document.getElementById('stat-judged').textContent = judgedRooms.length;
+            document.getElementById('stat-total').textContent = adminRooms.length + judgedRooms.length;
+            document.getElementById('count-admin').textContent = adminRooms.length;
+            document.getElementById('count-judged').textContent = judgedRooms.length;
+        }
+
+        function renderAll() {
+            const q = document.getElementById('event-search').value.trim().toLowerCase();
+            renderAdminHistory(filterRooms(adminRooms, q), adminRooms.length > 0);
+            renderJudgedHistory(filterRooms(judgedRooms, q), judgedRooms.length > 0);
+        }
+
+        function filterRooms(rooms, q) {
+            if (!q) return rooms;
+            return rooms.filter(r => (`${r.name || r.room_name || ''} ${r.code || ''}`).toLowerCase().includes(q));
+        }
+
+        // ---------- Admin Events ----------
+        function renderAdminHistory(rooms, hasAny) {
+            const container = document.getElementById('admin-rooms-list');
+            container.innerHTML = '';
+
+            if (!rooms.length) {
+                container.innerHTML = `<p class="empty-state">${hasAny ? 'No rooms match your search.' : 'No created rooms yet. Create one from the Room page.'}</p>`;
+                return;
+            }
+
+            rooms.slice()
+                .sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
+                .forEach(room => {
+                    const completed = String(room.status || '').toLowerCase() === 'completed';
+                    const title = room.name || room.room_name || `Room ${room.code}`;
+                    const code = encodeURIComponent(room.code);
+
+                    const row = document.createElement('div');
+                    row.className = 'event-row';
+                    row.innerHTML = `
+                        <div class="event-main">
+                            <h4 class="event-name">${esc(title)}</h4>
+                            <span class="room-code-tag">CODE: ${esc(room.code)} &middot; ${esc(room.num_judges)} judges</span>
+                        </div>
+                        <div class="event-meta">
+                            <span class="meta-label">Created</span>
+                            <span>${fmtDate(room.created_at)}</span>
+                        </div>
+                        <div class="event-meta">
+                            <span class="meta-label">Status</span>
+                            <span class="chip ${completed ? 'chip--done' : 'chip--ok'}">${completed ? 'Completed' : 'Active'}</span>
+                        </div>
+                        <div class="event-actions">
+                            ${completed ? '' : `<a class="btn-mini btn-mini--solid" href="Room.html?room=${code}">Manage</a>`}
+                            <a class="btn-mini" href="Results.html?room=${code}">View results</a>
+                        </div>
+                    `;
+                    container.appendChild(row);
+                });
+        }
+
+        // ---------- Judged Events ----------
+        function renderJudgedHistory(rooms, hasAny) {
+            const container = document.getElementById('judged-rooms-list');
+            container.innerHTML = '';
+
+            if (!rooms.length) {
+                container.innerHTML = `<p class="empty-state">${hasAny ? 'No events match your search.' : 'No judging history yet. Join a room as a judge to get started.'}</p>`;
+                return;
+            }
+
+            rooms.slice()
+                .sort((a, b) => new Date(b.last_submitted || 0) - new Date(a.last_submitted || 0))
+                .forEach(room => {
+                    const status = String(room.scoring_status || (room.last_submitted ? 'submitted' : 'in progress')).toLowerCase();
+                    const submitted = status === 'submitted';
+                    const title = room.name || room.room_name || `Room ${room.code}`;
+                    const code = encodeURIComponent(room.code);
+
+                    const row = document.createElement('div');
+                    row.className = 'event-row';
+                    row.innerHTML = `
+                        <div class="event-main">
+                            <h4 class="event-name">${esc(title)}</h4>
+                            <span class="room-code-tag">CODE: ${esc(room.code)} &middot; Judge #${esc(room.judge_number)}</span>
+                        </div>
+                        <div class="event-meta">
+                            <span class="meta-label">Scoring status</span>
+                            <span class="chip ${submitted ? 'chip--ok' : 'chip--warn'}">${submitted ? 'Submitted' : 'In progress'}</span>
+                        </div>
+                        <div class="event-meta">
+                            <span class="meta-label">Last active</span>
+                            <span>${fmtDateTime(room.last_submitted)}</span>
+                        </div>
+                        <div class="event-actions">
+                            <a class="btn-mini ${submitted ? '' : 'btn-mini--solid'}" href="${submitted ? 'Results.html' : 'Room.html'}?room=${code}">${submitted ? 'View results' : 'Resume'}</a>
+                        </div>
+                    `;
+                    container.appendChild(row);
+                });
+        }
+
+        // ---------- Tabs + search ----------
+        function setupTabs() {
+            const tabs = [document.getElementById('tab-admin'), document.getElementById('tab-judged')];
+            const panels = [document.getElementById('panel-admin'), document.getElementById('panel-judged')];
+
+            function select(i) {
+                tabs.forEach((t, idx) => {
+                    t.setAttribute('aria-selected', String(idx === i));
+                    t.tabIndex = idx === i ? 0 : -1;
+                    panels[idx].hidden = idx !== i;
+                });
+            }
+
+            tabs.forEach((t, i) => {
+                t.addEventListener('click', () => select(i));
+                t.addEventListener('keydown', (e) => {
+                    if (e.key === 'ArrowRight' || e.key === 'ArrowLeft') {
+                        const next = (i + (e.key === 'ArrowRight' ? 1 : tabs.length - 1)) % tabs.length;
+                        select(next);
+                        tabs[next].focus();
+                    }
+                });
+            });
+
+            document.getElementById('event-search').addEventListener('input', renderAll);
+        }
+    </script>
+
+    <script src="stage.js"></script>
+</body>
+</html>

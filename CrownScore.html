@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CrownScore</title>
+
+  <link rel="icon" type="image/png" href="logof.png">
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+
+  <!-- Shared navigation (same on every page). Keep FIRST -->
+  <link rel="stylesheet" href="nav.css">
+  <!-- Shared stage background (beams + sparkles) -->
+  <link rel="stylesheet" href="stage.css">
+  <!-- Home-only styles -->
+  <link rel="stylesheet" href="home.css">
+</head>
+<body class="home">
+
+  <!-- NAVIGATION (identical on every page; only the "active" link changes) -->
+  <header>
+    <nav class="navbar" aria-label="Main">
+      <div class="logo-container">
+        <img src="logof.png" alt="CrownScore Logo" class="nav-logo">
+        <span class="brand-title">CrownScore</span>
+      </div>
+      <div class="navbar-links">
+        <a href="CrownScore.html" class="active" aria-current="page">Home</a>
+        <a href="Room.html">Room</a>
+        <a href="Profile.html">Profile</a>
+        <a href="Guide.html">Guide</a>
+        <a href="index.html" class="btn-logout" onclick="localStorage.removeItem('currentUser')">Logout</a>
+      </div>
+    </nav>
+  </header>
+
+  <main class="hero-section">
+
+    <section class="hero-content">
+      <img src="Logo-Cscore.png" alt="CrownScore Logo" class="hero-logo">
+      <div class="descript">
+        <h2>Welcome to CrownScore</h2>
+        <p>Manage scores, rankings, and events effortlessly with CrownScore.</p>
+      </div>
+      <div class="hero-actions">
+        <a href="Room.html" class="btn-gold">Go to Room</a>
+        <a href="Guide.html" class="btn-outline">Read the Guide</a>
+      </div>
+    </section>
+
+    <section class="feature-row" aria-label="What you can do">
+      <article class="feature">
+        <h3>Scores</h3>
+        <p>Record each judge's marks for every contestant.</p>
+      </article>
+      <article class="feature">
+        <h3>Rankings</h3>
+        <p>See the standings update as scores come in.</p>
+      </article>
+      <article class="feature">
+        <h3>Events</h3>
+        <p>Set up and run your pageant events in one place.</p>
+      </article>
+    </section>
+
+  </main>
+
+  <script src="stage.js"></script>
+</body>
+</html>

@@ -1,0 +1,284 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Guide | CrownScore</title>
+
+    <link rel="icon" type="image/png" href="logof.png">
+
+    <!-- Shared navigation (same on every page). Keep FIRST -->
+    <link rel="stylesheet" href="nav.css">
+    <!-- Shared stage background (beams + sparkles) -->
+    <link rel="stylesheet" href="stage.css">
+    <!-- Page-only styles -->
+    <link rel="stylesheet" href="guide.css">
+</head>
+<body>
+
+    <!-- NAVIGATION (identical on every page; only the "active" link changes) -->
+    <header>
+        <nav class="navbar" aria-label="Main">
+            <div class="logo-container">
+                <img src="logof.png" alt="CrownScore Logo" class="nav-logo">
+                <span class="brand-title">CrownScore</span>
+            </div>
+            <div class="navbar-links">
+                <a href="CrownScore.html">Home</a>
+                <a href="Room.html">Room</a>
+                <a href="Profile.html">Profile</a>
+                <a href="Guide.html" class="active" aria-current="page">Guide</a>
+                <a href="index.html" class="btn-logout" onclick="localStorage.removeItem('currentUser')">Logout</a>
+            </div>
+        </nav>
+    </header>
+
+    <main class="guide-main">
+
+        <!-- ===== Title ===== -->
+        <section class="guide-hero reveal">
+            <p class="eyebrow">System Documentation</p>
+            <h1>CrownScore Guide</h1>
+            <p class="lead">Everything you need to know about how CrownScore works, from signing in to crowning the winners.</p>
+        </section>
+
+        <!-- ===== Workflow at a glance ===== -->
+        <section class="glance reveal" aria-label="Workflow at a glance">
+            <h2 class="glance-title">Workflow at a glance</h2>
+            <ol class="flow">
+                <li><span class="flow-num">1</span>Authentication</li>
+                <li><span class="flow-num">2</span>Main System</li>
+                <li><span class="flow-num">3</span>Room</li>
+                <li><span class="flow-num">4</span>Winners &amp; Rankings</li>
+                <li><span class="flow-num">5</span>Logout</li>
+            </ol>
+        </section>
+
+        <!-- ===== Quick links ===== -->
+        <nav class="toc reveal" aria-label="Guide sections">
+            <a href="#authentication">Authentication</a>
+            <a href="#main-system">Main System</a>
+            <a href="#profile">Profile</a>
+            <a href="#guide-docs">Guide</a>
+            <a href="#room">Room</a>
+            <a href="#scoring">Scoring</a>
+            <a href="#logout">Logout</a>
+        </nav>
+
+        <!-- ===== 1. Authentication ===== -->
+        <article class="guide-section reveal" id="authentication">
+            <header class="section-head">
+                <span class="badge">1</span>
+                <div>
+                    <p class="module-tag">Module</p>
+                    <h2>Authentication</h2>
+                </div>
+            </header>
+
+            <p class="section-intro">The CrownScore workflow starts with the Authentication Module. It asks you to choose between <strong>logging in</strong> or <strong>signing up</strong>.</p>
+
+            <div class="path-grid">
+                <div class="path">
+                    <h3>Login</h3>
+                    <ol class="steps">
+                        <li>Choose <strong>Login</strong> and enter your username and password.</li>
+                        <li>If the credentials are correct, you get access to the <strong>Main System</strong>.</li>
+                        <li>If the credentials are wrong, you can try again. <span class="tag">↻ Loop</span></li>
+                        <li>Forgot your password? Start the <strong>Forgot Password</strong> process below.</li>
+                    </ol>
+                </div>
+
+                <div class="path">
+                    <h3>Sign-up</h3>
+                    <ol class="steps">
+                        <li>Choose <strong>Sign-up</strong> and enter a <strong>username</strong> and <strong>password</strong>.</li>
+                        <li>Pick a <strong>security question</strong> from the list, or write your own, and type your <strong>security answer</strong>.</li>
+                        <li>If the input is invalid, the system shows a message and repeats the request until the data is correct. <span class="tag">↻ Loop</span></li>
+                        <li>Once valid information is given, you move directly into the <strong>Main System</strong>.</li>
+                    </ol>
+                </div>
+            </div>
+
+            <div class="callout">
+                <h3>Forgot Password</h3>
+                <ol class="steps">
+                    <li>Enter your <strong>username</strong>.</li>
+                    <li>The system finds your account and shows the <strong>security question</strong> you saved. It is read-only, so you can't change it here.</li>
+                    <li>Type your <strong>security answer</strong> and your <strong>new password</strong>.</li>
+                    <li>Once the password is updated, you return to the login screen.</li>
+                </ol>
+            </div>
+        </article>
+
+        <!-- ===== 2. Main System ===== -->
+        <article class="guide-section reveal" id="main-system">
+            <header class="section-head">
+                <span class="badge">2</span>
+                <div>
+                    <p class="module-tag">Module</p>
+                    <h2>Main System</h2>
+                </div>
+            </header>
+
+            <p class="section-intro">After authentication, the Main System Module appears. It offers four choices:</p>
+
+            <div class="choice-grid">
+                <a class="choice" href="#profile">
+                    <h3>Profile</h3>
+                    <p>Your account and events</p>
+                </a>
+                <a class="choice" href="#guide-docs">
+                    <h3>Guide</h3>
+                    <p>System documentation</p>
+                </a>
+                <a class="choice" href="#room">
+                    <h3>Room</h3>
+                    <p>Start or join judging</p>
+                </a>
+                <a class="choice" href="#logout">
+                    <h3>Logout</h3>
+                    <p>End your session</p>
+                </a>
+            </div>
+        </article>
+
+        <!-- ===== 3. Profile ===== -->
+        <article class="guide-section reveal" id="profile">
+            <header class="section-head">
+                <span class="badge">3</span>
+                <div>
+                    <p class="module-tag">Main System</p>
+                    <h2>Profile</h2>
+                </div>
+            </header>
+
+            <ol class="steps">
+                <li>Choose <strong>Profile</strong> to see your username, your role (<strong>Admin</strong> or <strong>Judge</strong>) and the total number of pageant sessions you have attended.</li>
+                <li>Open the <strong>Admin Events</strong> tab to see every room you created: its name, creation date and status (<strong>Active</strong> or <strong>Completed</strong>), with quick links to <strong>Manage</strong> a room or <strong>View results</strong>.</li>
+                <li>Open the <strong>Judged Events</strong> tab to see every room where you were a judge, your scoring status (<strong>Submitted</strong> or <strong>In progress</strong>) and when you were last active.</li>
+                <li>Use the search box to find a room by name or code, then go back to the main dashboard.</li>
+            </ol>
+        </article>
+
+        <!-- ===== 4. Guide ===== -->
+        <article class="guide-section reveal" id="guide-docs">
+            <header class="section-head">
+                <span class="badge">4</span>
+                <div>
+                    <p class="module-tag">Main System</p>
+                    <h2>Guide</h2>
+                </div>
+            </header>
+
+            <ol class="steps">
+                <li>Select <strong>Guide</strong> to open the system documentation.</li>
+                <li>Read through the guide. The system keeps it open until you finish reading and return to the dashboard. <span class="tag">↻ Loop</span></li>
+            </ol>
+        </article>
+
+        <!-- ===== 5. Room ===== -->
+        <article class="guide-section reveal" id="room">
+            <header class="section-head">
+                <span class="badge">5</span>
+                <div>
+                    <p class="module-tag">Main System</p>
+                    <h2>Room</h2>
+                </div>
+            </header>
+
+            <p class="section-intro">Choosing <strong>Room</strong> begins the judging process, depending on your role.</p>
+
+            <div class="path-grid">
+                <div class="path">
+                    <h3><span class="role-icon">👑</span> Admin</h3>
+                    <ol class="steps">
+                        <li>Start by <strong>creating a room</strong>: enter the <strong>room name</strong>, the <strong>number of judges</strong> and a <strong>room access password</strong>. The <strong>Room ID</strong> is generated for you.</li>
+                        <li>Add your <strong>categories</strong> (for example, Production Number) and the <strong>sub-criteria</strong> under each one with their weights. The weights in each category must total exactly <strong>100%</strong>.</li>
+                        <li>Add your <strong>candidates</strong>: candidate number, name and the title or group they represent.</li>
+                        <li>Share the Room ID and password with your judges, then click <strong>Start Judging</strong>.</li>
+                        <li>Monitor the live score tracking until all judges have submitted their scores. <span class="tag">↻ Loop</span></li>
+                        <li>Once all scores are in, the system <strong>automatically calculates the results</strong>.</li>
+                    </ol>
+                </div>
+
+                <div class="path">
+                    <h3><span class="role-icon">⚖️</span> Judge</h3>
+                    <ol class="steps">
+                        <li>Select <strong>Join Room</strong> and enter the Room ID, choose your judge slot and enter the room password.</li>
+                        <li>If the password is wrong, you can keep entering it until it is accepted. <span class="tag">↻ Loop</span></li>
+                        <li>Once validated, you join the room and see the candidates for that room only.</li>
+                        <li>Score each candidate on every sub-criterion. A score can't go above that sub-criterion's maximum.</li>
+                        <li><strong>Submit</strong> your scores when you are done.</li>
+                    </ol>
+                </div>
+            </div>
+
+            <div class="callout winners">
+                <h3><span class="role-icon">🏆</span> Winners &amp; Rankings</h3>
+                <p>After all scores are submitted, both the Admin and the Judges are taken to a shared screen that shows the winners, the category awards and the full rankings. Use <strong>Download Official Report</strong> to save the tabulation as an Excel file or a printable PDF. This screen stays open until you choose to leave. <span class="tag">↻ Loop</span> When you leave, you return to the Main System.</p>
+            </div>
+        </article>
+
+        <!-- ===== 6. Scoring ===== -->
+        <article class="guide-section reveal" id="scoring">
+            <header class="section-head">
+                <span class="badge">6</span>
+                <div>
+                    <p class="module-tag">How it works</p>
+                    <h2>How Scores Are Calculated</h2>
+                </div>
+            </header>
+
+            <ol class="steps">
+                <li><strong>Sub-criterion score:</strong> each judge scores a candidate on every sub-criterion, for example Pose 30%, Mastery 30%, Self-Introduction 30% and Audience Impact 10%.</li>
+                <li><strong>Category score:</strong> the system adds up all the sub-criterion scores of that category. A category is worth 100 points in total.</li>
+                <li><strong>Final score:</strong> the category scores are combined, using each category's weight, into the candidate's overall score. The highest final score ranks first.</li>
+            </ol>
+        </article>
+
+        <!-- ===== 7. Logout ===== -->
+        <article class="guide-section reveal" id="logout">
+            <header class="section-head">
+                <span class="badge">7</span>
+                <div>
+                    <p class="module-tag">Main System</p>
+                    <h2>Logout</h2>
+                </div>
+            </header>
+
+            <p class="section-intro">Selecting <strong>Logout</strong> brings up a confirmation request.</p>
+
+            <div class="path-grid">
+                <div class="path">
+                    <h3>Yes</h3>
+                    <p>The session ends and the program closes.</p>
+                </div>
+                <div class="path">
+                    <h3>No</h3>
+                    <p>You return immediately to the Main System dashboard.</p>
+                </div>
+            </div>
+        </article>
+
+    </main>
+
+    <script src="stage.js"></script>
+    <script>
+        // Gentle fade-in as each section scrolls into view
+        (function () {
+            var items = document.querySelectorAll('.reveal');
+            if (!('IntersectionObserver' in window)) return;
+            document.documentElement.classList.add('js');
+            var io = new IntersectionObserver(function (entries) {
+                entries.forEach(function (e) {
+                    if (e.isIntersecting) {
+                        e.target.classList.add('in');
+                        io.unobserve(e.target);
+                    }
+                });
+            }, { threshold: 0.12 });
+            items.forEach(function (el) { io.observe(el); });
+        })();
+    </script>
+</body>
+</html>

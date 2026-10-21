@@ -1,0 +1,107 @@
+/* =====================================================
+   CrownScore stage background  (stage.css)
+   Spotlight beams + gold sparkles + stage-floor glow.
+   Used by every page together with stage.js:
+     <link rel="stylesheet" href="stage.css">   (after nav.css)
+     <script src="stage.js"></script>           (end of <body>)
+   ===================================================== */
+
+/* ===== Stage background ===== */
+.stage-bg {
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  overflow: hidden;
+  pointer-events: none;
+  background:
+    radial-gradient(ellipse at 50% 0%, #2b2410 0%, transparent 65%),
+    radial-gradient(ellipse at 50% 110%, rgba(212, 175, 55, 0.22), transparent 60%),
+    #141414;
+}
+
+/* Spotlight beams that sweep slowly like a pageant stage */
+.beam {
+  position: absolute;
+  top: -5%;
+  width: 38vw;
+  height: 125vh;
+  margin-left: -19vw;
+  transform-origin: 50% 0;
+  clip-path: polygon(46% 0, 54% 0, 100% 100%, 0 100%);
+  background: linear-gradient(
+    to bottom,
+    rgba(255, 232, 150, 0.34),
+    rgba(255, 232, 150, 0.08) 65%,
+    transparent
+  );
+  filter: blur(6px);
+  mix-blend-mode: screen;
+  animation: sway var(--dur) ease-in-out infinite alternate;
+}
+
+.beam-1 { left: 14%; --from: -20deg; --to: -4deg; --dur: 9s; }
+.beam-2 { left: 50%; --from: -9deg;  --to: 9deg;  --dur: 12s; opacity: 0.85; }
+.beam-3 { left: 86%; --from: 4deg;   --to: 20deg; --dur: 10s; }
+
+@keyframes sway {
+  from { transform: rotate(var(--from)); }
+  to   { transform: rotate(var(--to)); }
+}
+
+/* Soft golden glow on the stage floor */
+.stage-floor {
+  position: absolute;
+  left: 50%;
+  bottom: -18vh;
+  width: 90vw;
+  height: 36vh;
+  transform: translateX(-50%);
+  border-radius: 50%;
+  background: radial-gradient(ellipse, rgba(212, 175, 55, 0.35), transparent 68%);
+}
+
+/* Gold sparkles (created by the small script in CrownScore.html) */
+.sparkles {
+  position: absolute;
+  inset: 0;
+}
+
+.sparkle {
+  position: absolute;
+  width: var(--s);
+  height: var(--s);
+  background: #f4d77c;
+  clip-path: polygon(50% 0, 62% 38%, 100% 50%, 62% 62%, 50% 100%, 38% 62%, 0 50%, 38% 38%);
+  opacity: 0;
+  animation: twinkle var(--d) ease-in-out var(--delay) infinite;
+}
+
+@keyframes twinkle {
+  0%, 100% { opacity: 0;   transform: translateY(0) scale(0.4); }
+  50%      { opacity: 0.9; transform: translateY(-18px) scale(1); }
+}
+
+/* ===== Phones: one centered beam is enough ===== */
+@media (max-width: 760px) {
+  .beam {
+    width: 70vw;
+    margin-left: -35vw;
+  }
+
+  .beam-1,
+  .beam-3 {
+    display: none;
+  }
+}
+
+/* ===== Respect reduced motion ===== */
+@media (prefers-reduced-motion: reduce) {
+  .beam,
+  .sparkle {
+    animation: none;
+  }
+
+  .sparkle {
+    opacity: 0.5;
+  }
+}

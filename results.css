@@ -1,0 +1,344 @@
+/* =====================================================
+   results.css - Winners page (loads AFTER nav.css + stage.css)
+   ===================================================== */
+
+.results-main {
+  width: 100%;
+  max-width: 1050px;
+  margin: 0 auto;
+  padding: 2.5rem 1.5rem 4rem;
+}
+
+/* ===== Title ===== */
+.results-hero {
+  text-align: center;
+  margin-bottom: 2rem;
+}
+
+.eyebrow {
+  display: inline-block;
+  margin-bottom: 0.6rem;
+  font-size: 0.8rem;
+  font-weight: 600;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--gold);
+}
+
+.results-hero h1 {
+  font-family: 'Cormorant Garamond', Georgia, serif;
+  font-size: 3.2rem;
+  font-weight: 700;
+  line-height: 1.05;
+  color: #fff;
+}
+
+.event-meta-line {
+  margin-top: 0.6rem;
+  font-size: 0.95rem;
+  color: #aaa;
+}
+
+.status-msg {
+  margin: 1rem auto 2rem;
+  max-width: 560px;
+  padding: 1rem 1.25rem;
+  text-align: center;
+  color: #ddd;
+  background: rgba(28, 28, 28, 0.85);
+  border: 1px solid #3a3a3a;
+  border-radius: 12px;
+}
+
+.status-msg a { color: var(--gold); }
+
+/* ===== Download button (prominent) ===== */
+.export-menu {
+  position: relative;
+  display: inline-block;
+  margin-top: 1.4rem;
+}
+
+.export-menu summary { list-style: none; cursor: pointer; }
+.export-menu summary::-webkit-details-marker { display: none; }
+
+.btn-download {
+  display: inline-block;
+  padding: 0.95rem 2rem;
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: #111;
+  background: linear-gradient(135deg, #f1d27a, #d4af37);
+  border-radius: 10px;
+  box-shadow: 0 6px 22px rgba(212, 175, 55, 0.4);
+  transition: transform 0.15s, box-shadow 0.2s;
+}
+
+.btn-download:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 10px 28px rgba(212, 175, 55, 0.55);
+}
+
+.export-options {
+  position: absolute;
+  top: calc(100% + 0.5rem);
+  left: 50%;
+  z-index: 20;
+  transform: translateX(-50%);
+  display: flex;
+  flex-direction: column;
+  min-width: 220px;
+  overflow: hidden;
+  background: #1c1c1c;
+  border: 1px solid rgba(212, 175, 55, 0.5);
+  border-radius: 10px;
+  box-shadow: 0 14px 34px rgba(0, 0, 0, 0.6);
+}
+
+.export-options button {
+  padding: 0.85rem 1.1rem;
+  font: inherit;
+  font-size: 0.95rem;
+  text-align: left;
+  color: #eee;
+  background: none;
+  border: none;
+  cursor: pointer;
+}
+
+.export-options button:hover { color: #111; background: var(--gold); }
+
+/* ===== Podium ===== */
+.podium {
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  gap: 1rem;
+  margin: 2.5rem 0 3rem;
+}
+
+.place {
+  flex: 1;
+  max-width: 290px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  opacity: 0;
+  transform: translateY(40px);
+  animation: rise-in 0.8s ease forwards;
+}
+
+.place-3 { animation-delay: 0.2s; }
+.place-2 { animation-delay: 0.9s; }
+.place-1 { animation-delay: 1.8s; }
+
+@keyframes rise-in {
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.crown {
+  font-size: 2.6rem;
+  line-height: 1;
+  filter: drop-shadow(0 0 12px rgba(241, 210, 122, 0.8));
+}
+
+.place-name {
+  margin: 0.4rem 0 0.1rem;
+  font-family: 'Cormorant Garamond', Georgia, serif;
+  font-size: 1.7rem;
+  font-weight: 700;
+  line-height: 1.1;
+  color: #fff;
+}
+
+.place-title {
+  min-height: 1.2em;
+  margin-bottom: 0.7rem;
+  font-size: 0.85rem;
+  color: #aaa;
+}
+
+.pedestal {
+  width: 100%;
+  padding: 1rem 0.75rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.2rem;
+  color: #111;
+  border-radius: 12px 12px 0 0;
+  box-shadow: 0 -4px 24px rgba(0, 0, 0, 0.4);
+}
+
+.place-1 .pedestal { min-height: 230px; background: linear-gradient(180deg, #f6dc8a, #d4af37 60%, #9c7a1c); box-shadow: 0 0 40px rgba(212, 175, 55, 0.5); }
+.place-2 .pedestal { min-height: 180px; background: linear-gradient(180deg, #e4e4e4, #b5b5b5 60%, #7d7d7d); }
+.place-3 .pedestal { min-height: 145px; background: linear-gradient(180deg, #e0a975, #b87333 60%, #7a4a1f); }
+
+.pedestal .rank-big {
+  font-family: 'Cormorant Garamond', Georgia, serif;
+  font-size: 2.6rem;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.pedestal .award-label {
+  font-size: 0.8rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.pedestal .score {
+  margin-top: 0.4rem;
+  font-size: 1.15rem;
+  font-weight: 700;
+}
+
+/* ===== Section titles ===== */
+.section-title {
+  margin-bottom: 1rem;
+  font-family: 'Cormorant Garamond', Georgia, serif;
+  font-size: 2rem;
+  font-weight: 700;
+  color: #fff;
+}
+
+.section-title::after {
+  content: "";
+  display: block;
+  width: 60px;
+  height: 2px;
+  margin-top: 0.4rem;
+  background: var(--gold);
+}
+
+/* ===== Category awards ===== */
+.awards-section { margin-bottom: 2.5rem; }
+
+.awards-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+  gap: 1rem;
+}
+
+.award-card {
+  padding: 1.2rem 1.3rem;
+  background: rgba(28, 28, 28, 0.82);
+  -webkit-backdrop-filter: blur(10px);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(212, 175, 55, 0.3);
+  border-top: 3px solid var(--gold);
+  border-radius: 12px;
+}
+
+.award-card .award-cat {
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--gold);
+}
+
+.award-card h3 {
+  margin: 0.4rem 0 0.2rem;
+  font-family: 'Cormorant Garamond', Georgia, serif;
+  font-size: 1.5rem;
+  color: #fff;
+}
+
+.award-card p { font-size: 0.9rem; color: #aaa; }
+.award-card strong { color: var(--gold-soft); }
+
+/* ===== Ranking table ===== */
+.ranking-section { margin-bottom: 2rem; }
+
+.table-scroll { overflow-x: auto; }
+
+.rank-table {
+  width: 100%;
+  border-collapse: collapse;
+  overflow: hidden;
+  background: rgba(20, 20, 20, 0.9);
+  border: 1px solid #333;
+  border-radius: 10px;
+}
+
+.rank-table th,
+.rank-table td {
+  padding: 0.85rem 1rem;
+  text-align: center;
+  font-size: 0.92rem;
+  border-bottom: 1px solid #2a2a2a;
+}
+
+.rank-table th {
+  font-size: 0.78rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--gold);
+  background: #111;
+}
+
+.rank-table td.left, .rank-table th.left { text-align: left; }
+.rank-table tbody tr:hover { background: rgba(212, 175, 55, 0.05); }
+
+.rank-table tbody tr.top-1 { background: rgba(212, 175, 55, 0.16); }
+.rank-table tbody tr.top-1 td { font-weight: 600; color: #fff; }
+.rank-table .final { font-weight: 700; color: var(--gold-soft); }
+.rank-table .title-cell { color: #aaa; }
+
+.leave-row { text-align: center; margin-top: 2rem; }
+
+.btn-leave {
+  display: inline-block;
+  padding: 0.8rem 1.8rem;
+  font-weight: 600;
+  text-decoration: none;
+  color: var(--gold);
+  border: 1.5px solid var(--gold);
+  border-radius: 10px;
+  transition: background 0.2s, color 0.2s;
+}
+
+.btn-leave:hover { color: #111; background: var(--gold); }
+
+/* ===== Phones ===== */
+@media (max-width: 700px) {
+  .results-hero h1 { font-size: 2.3rem; }
+
+  .podium { gap: 0.5rem; }
+  .place-name { font-size: 1.15rem; }
+  .crown { font-size: 2rem; }
+  .pedestal .rank-big { font-size: 1.9rem; }
+  .place-1 .pedestal { min-height: 190px; }
+  .place-2 .pedestal { min-height: 150px; }
+  .place-3 .pedestal { min-height: 120px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .place { opacity: 1; transform: none; animation: none; }
+}
+
+/* ===== Print = official report ===== */
+@media print {
+  header, .stage-bg, .export-menu, .leave-row, .status-msg { display: none !important; }
+
+  body { color: #000; background: #fff !important; }
+
+  .results-main { max-width: none; padding: 0; }
+  .results-hero h1, .section-title, .place-name, .award-card h3 { color: #000; }
+  .event-meta-line, .place-title, .award-card p { color: #444; }
+
+  .place { opacity: 1; transform: none; animation: none; }
+  .pedestal { box-shadow: none; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+
+  .award-card, .rank-table { background: #fff; border-color: #999; box-shadow: none; }
+  .rank-table th { color: #000; background: #eee; }
+  .rank-table td { color: #000; border-color: #ccc; }
+  .rank-table tbody tr.top-1 { background: #f5ebc2; }
+  .rank-table .final, .award-card strong { color: #000; }
+
+  .award-card, .rank-table tr { break-inside: avoid; }
+}

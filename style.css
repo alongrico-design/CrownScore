@@ -1,0 +1,256 @@
+/* =====================================================
+   CrownScore Home page (loads AFTER style.css)
+   Everything is scoped to body.home so other pages
+   and the navigation are not affected.
+   ===================================================== */
+
+body.home {
+  background-color: #141414;
+}
+
+/* ===== Stage background ===== */
+.stage-bg {
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  overflow: hidden;
+  pointer-events: none;
+  background:
+    radial-gradient(ellipse at 50% 0%, #2b2410 0%, transparent 65%),
+    radial-gradient(ellipse at 50% 110%, rgba(212, 175, 55, 0.22), transparent 60%),
+    #141414;
+}
+
+/* Spotlight beams that sweep slowly like a pageant stage */
+.beam {
+  position: absolute;
+  top: -5%;
+  width: 38vw;
+  height: 125vh;
+  margin-left: -19vw;
+  transform-origin: 50% 0;
+  clip-path: polygon(46% 0, 54% 0, 100% 100%, 0 100%);
+  background: linear-gradient(
+    to bottom,
+    rgba(255, 232, 150, 0.34),
+    rgba(255, 232, 150, 0.08) 65%,
+    transparent
+  );
+  filter: blur(6px);
+  mix-blend-mode: screen;
+  animation: sway var(--dur) ease-in-out infinite alternate;
+}
+
+.beam-1 { left: 14%; --from: -20deg; --to: -4deg; --dur: 9s; }
+.beam-2 { left: 50%; --from: -9deg;  --to: 9deg;  --dur: 12s; opacity: 0.85; }
+.beam-3 { left: 86%; --from: 4deg;   --to: 20deg; --dur: 10s; }
+
+@keyframes sway {
+  from { transform: rotate(var(--from)); }
+  to   { transform: rotate(var(--to)); }
+}
+
+/* Soft golden glow on the stage floor */
+.stage-floor {
+  position: absolute;
+  left: 50%;
+  bottom: -18vh;
+  width: 90vw;
+  height: 36vh;
+  transform: translateX(-50%);
+  border-radius: 50%;
+  background: radial-gradient(ellipse, rgba(212, 175, 55, 0.35), transparent 68%);
+}
+
+/* Gold sparkles (created by the small script in CrownScore.html) */
+.sparkles {
+  position: absolute;
+  inset: 0;
+}
+
+.sparkle {
+  position: absolute;
+  width: var(--s);
+  height: var(--s);
+  background: #f4d77c;
+  clip-path: polygon(50% 0, 62% 38%, 100% 50%, 62% 62%, 50% 100%, 38% 62%, 0 50%, 38% 38%);
+  opacity: 0;
+  animation: twinkle var(--d) ease-in-out var(--delay) infinite;
+}
+
+@keyframes twinkle {
+  0%, 100% { opacity: 0;   transform: translateY(0) scale(0.4); }
+  50%      { opacity: 0.9; transform: translateY(-18px) scale(1); }
+}
+
+/* ===== Layout ===== */
+body.home .hero-section {
+  flex-direction: column;
+  gap: 2rem;
+  padding: 3rem 1.5rem 4rem;
+  font-family: "Inter", "Segoe UI", Arial, sans-serif;
+}
+
+/* ===== Welcome card ===== */
+body.home .hero-content {
+  max-width: 560px;
+  padding: 2.75rem 3rem;
+  background: rgba(28, 28, 28, 0.78);
+  -webkit-backdrop-filter: blur(10px);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(212, 175, 55, 0.35);
+  border-top: 3px solid #d4af37;
+  border-radius: 18px;
+  box-shadow:
+    0 25px 60px rgba(0, 0, 0, 0.6),
+    0 0 60px rgba(212, 175, 55, 0.12);
+  animation: rise 0.8s ease both;
+}
+
+@keyframes rise {
+  from { opacity: 0; transform: translateY(18px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+body.home .hero-logo {
+  width: 170px;
+  max-width: 100%;
+  margin-bottom: 1.75rem;
+  background: #ffffff;
+  border-radius: 6px;
+  filter: none;
+  box-shadow: 0 0 50px rgba(212, 175, 55, 0.45);
+}
+
+body.home .descript h2 {
+  font-family: "Cormorant Garamond", Georgia, serif;
+  font-size: 2.9rem;
+  font-weight: 700;
+  line-height: 1.1;
+  color: #ffffff;
+  margin-bottom: 0.75rem;
+}
+
+body.home .descript p {
+  max-width: 380px;
+  margin: 0 auto;
+  font-size: 1rem;
+  line-height: 1.6;
+  color: #b5b5b5;
+}
+
+/* ===== Buttons ===== */
+.hero-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 0.85rem;
+  margin-top: 2rem;
+}
+
+.btn-gold,
+.btn-outline {
+  padding: 0.8rem 1.6rem;
+  font-size: 1rem;
+  font-weight: 600;
+  text-decoration: none;
+  border-radius: 10px;
+  transition: background 0.2s, color 0.2s, box-shadow 0.2s;
+}
+
+.btn-gold {
+  color: #1a1a1a;
+  background: #d4af37;
+}
+
+.btn-gold:hover {
+  background: #f1c40f;
+  box-shadow: 0 4px 16px rgba(212, 175, 55, 0.45);
+}
+
+.btn-outline {
+  color: #d4af37;
+  border: 1.5px solid #d4af37;
+}
+
+.btn-outline:hover {
+  color: #f1c40f;
+  border-color: #f1c40f;
+  background: rgba(212, 175, 55, 0.1);
+}
+
+.btn-gold:focus-visible,
+.btn-outline:focus-visible {
+  outline: 2px solid #f1d27a;
+  outline-offset: 3px;
+}
+
+/* ===== Feature tiles ===== */
+.feature-row {
+  width: 100%;
+  max-width: 900px;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1.25rem;
+}
+
+.feature {
+  padding: 1.5rem 1.4rem;
+  text-align: center;
+  background: rgba(28, 28, 28, 0.7);
+  -webkit-backdrop-filter: blur(8px);
+  backdrop-filter: blur(8px);
+  border: 1px solid #3a3a3a;
+  border-radius: 14px;
+}
+
+.feature h3 {
+  font-family: "Cormorant Garamond", Georgia, serif;
+  font-size: 1.7rem;
+  font-weight: 700;
+  color: #d4af37;
+  margin-bottom: 0.4rem;
+}
+
+.feature p {
+  font-size: 0.92rem;
+  line-height: 1.5;
+  color: #b5b5b5;
+}
+
+/* ===== Mobile ===== */
+@media (max-width: 760px) {
+  body.home .hero-content {
+    padding: 2.25rem 1.5rem;
+  }
+
+  body.home .descript h2 {
+    font-size: 2.3rem;
+  }
+
+  .feature-row {
+    grid-template-columns: 1fr;
+  }
+
+  .beam {
+    width: 70vw;
+    margin-left: -35vw;
+  }
+
+  .beam-1, .beam-3 {
+    display: none;
+  }
+}
+
+/* ===== Respect reduced motion ===== */
+@media (prefers-reduced-motion: reduce) {
+  .beam,
+  .sparkle,
+  body.home .hero-content {
+    animation: none;
+  }
+
+  .sparkle {
+    opacity: 0.5;
+  }
+}

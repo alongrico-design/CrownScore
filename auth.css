@@ -1,0 +1,173 @@
+/* =====================================================
+   auth.css - extra styles for Register + Forgot Password
+   Link it AFTER Login.css:
+     <link rel="stylesheet" href="Login.css">
+     <link rel="stylesheet" href="auth.css">
+   ===================================================== */
+
+/* ===== Select (matches the text inputs) ===== */
+.field select {
+  width: 100%;
+  padding: 0.8rem 2.4rem 0.8rem 0.9rem;
+  font: inherit;
+  font-size: 1rem;
+  color: var(--text);
+  background: var(--field) url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'><path d='M1 1l5 5 5-5' fill='none' stroke='%23d4a72c' stroke-width='2' stroke-linecap='round'/></svg>") no-repeat right 0.9rem center;
+  -webkit-appearance: none;
+  appearance: none;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  outline: none;
+  cursor: pointer;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.field select:hover { border-color: #555; }
+
+.field select:focus {
+  border-color: var(--gold);
+  box-shadow: 0 0 0 3px rgba(212, 167, 44, 0.25);
+}
+
+.field select option {
+  color: #fff;
+  background: #1a1a1a;
+}
+
+/* ===== Read-only field (security question on Forgot Password) ===== */
+.field input[readonly] {
+  color: var(--gold-light);
+  background: #202020;
+  border-style: dashed;
+  cursor: not-allowed;
+}
+
+.field input[readonly]:focus {
+  border-color: var(--line);
+  box-shadow: none;
+}
+
+/* ===== Stepper (Forgot Password) ===== */
+.stepper {
+  list-style: none;
+  display: flex;
+  counter-reset: s;
+}
+
+.stepper li {
+  position: relative;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.4rem;
+  text-align: center;
+  font-size: 0.75rem;
+  color: var(--muted);
+}
+
+.stepper li::before {
+  counter-increment: s;
+  content: counter(s);
+  z-index: 1;
+  display: grid;
+  place-items: center;
+  width: 1.9rem;
+  height: 1.9rem;
+  font-size: 0.85rem;
+  font-weight: 700;
+  background: var(--field);
+  border: 1px solid var(--line);
+  border-radius: 50%;
+}
+
+.stepper li:not(:last-child)::after {
+  content: "";
+  position: absolute;
+  top: 0.95rem;
+  left: calc(50% + 1.2rem);
+  right: calc(-50% + 1.2rem);
+  height: 2px;
+  background: var(--line);
+}
+
+.stepper li.current { color: #fff; }
+
+.stepper li.current::before {
+  color: var(--gold);
+  border-color: var(--gold);
+  box-shadow: 0 0 0 3px rgba(212, 167, 44, 0.25);
+}
+
+.stepper li.done { color: var(--gold-light); }
+
+.stepper li.done::before {
+  content: "\2713";
+  color: #1a1a1a;
+  background: var(--gold);
+  border-color: var(--gold);
+}
+
+.stepper li.done:not(:last-child)::after { background: var(--gold); }
+
+/* ===== Reveal panel + small helpers ===== */
+.reset-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 1.1rem;
+  animation: panel-in 0.4s ease both;
+}
+
+.reset-panel[hidden],
+.field[hidden],
+.btn-outline-gold[hidden],
+.link-btn[hidden] {
+  display: none;
+}
+
+@keyframes panel-in {
+  from { opacity: 0; transform: translateY(10px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.btn-outline-gold {
+  padding: 0.8rem 1rem;
+  font: inherit;
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--gold);
+  background: transparent;
+  border: 1.5px solid var(--gold);
+  border-radius: 10px;
+  cursor: pointer;
+  transition: background 0.2s, color 0.2s;
+}
+
+.btn-outline-gold:hover:not(:disabled) {
+  color: var(--gold-light);
+  background: rgba(212, 167, 44, 0.1);
+}
+
+.btn-outline-gold:disabled,
+.btn-login:disabled {
+  opacity: 0.6;
+  cursor: wait;
+}
+
+.link-btn {
+  align-self: flex-end;
+  padding: 0;
+  font: inherit;
+  font-size: 0.85rem;
+  color: var(--muted);
+  background: none;
+  border: none;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.link-btn:hover { color: var(--gold-light); }
+
+@media (prefers-reduced-motion: reduce) {
+  .reset-panel { animation: none; }
+}

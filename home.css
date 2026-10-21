@@ -1,0 +1,174 @@
+/* =====================================================
+   CrownScore Home page (loads AFTER nav.css)
+   Self-contained: no dependency on style.css.
+   Everything is scoped to body.home.
+   ===================================================== */
+
+body.home {
+  background-color: #141414;
+}
+
+/* ===== Layout ===== */
+body.home .hero-section {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  gap: 2rem;
+  padding: 3rem 1.5rem 4rem;
+  font-family: "Inter", "Segoe UI", Arial, sans-serif;
+}
+
+/* ===== Welcome card ===== */
+body.home .hero-content {
+  width: 100%;
+  max-width: 560px;
+  text-align: center;
+  padding: 2.75rem 3rem;
+  background: rgba(28, 28, 28, 0.78);
+  -webkit-backdrop-filter: blur(10px);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(212, 175, 55, 0.35);
+  border-top: 3px solid #d4af37;
+  border-radius: 18px;
+  box-shadow:
+    0 25px 60px rgba(0, 0, 0, 0.6),
+    0 0 60px rgba(212, 175, 55, 0.12);
+  animation: rise 0.8s ease both;
+}
+
+@keyframes rise {
+  from { opacity: 0; transform: translateY(18px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+body.home .hero-logo {
+  display: block;
+  width: 170px;
+  max-width: 100%;
+  height: auto;
+  margin: 0 auto 1.75rem;
+  background: #ffffff;
+  border-radius: 6px;
+  filter: none;
+  box-shadow: 0 0 50px rgba(212, 175, 55, 0.45);
+}
+
+body.home .descript h2 {
+  font-family: "Cormorant Garamond", Georgia, serif;
+  font-size: 2.9rem;
+  font-weight: 700;
+  line-height: 1.1;
+  color: #ffffff;
+  margin-bottom: 0.75rem;
+}
+
+body.home .descript p {
+  max-width: 380px;
+  margin: 0 auto;
+  font-size: 1rem;
+  line-height: 1.6;
+  color: #b5b5b5;
+}
+
+/* ===== Buttons ===== */
+.hero-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 0.85rem;
+  margin-top: 2rem;
+}
+
+.btn-gold,
+.btn-outline {
+  padding: 0.8rem 1.6rem;
+  font-size: 1rem;
+  font-weight: 600;
+  text-decoration: none;
+  border-radius: 10px;
+  transition: background 0.2s, color 0.2s, box-shadow 0.2s;
+}
+
+.btn-gold {
+  color: #1a1a1a;
+  background: #d4af37;
+}
+
+.btn-gold:hover {
+  background: #f1c40f;
+  box-shadow: 0 4px 16px rgba(212, 175, 55, 0.45);
+}
+
+.btn-outline {
+  color: #d4af37;
+  border: 1.5px solid #d4af37;
+}
+
+.btn-outline:hover {
+  color: #f1c40f;
+  border-color: #f1c40f;
+  background: rgba(212, 175, 55, 0.1);
+}
+
+.btn-gold:focus-visible,
+.btn-outline:focus-visible {
+  outline: 2px solid #f1d27a;
+  outline-offset: 3px;
+}
+
+/* ===== Feature tiles ===== */
+.feature-row {
+  width: 100%;
+  max-width: 900px;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1.25rem;
+}
+
+.feature {
+  padding: 1.5rem 1.4rem;
+  text-align: center;
+  background: rgba(28, 28, 28, 0.7);
+  -webkit-backdrop-filter: blur(8px);
+  backdrop-filter: blur(8px);
+  border: 1px solid #3a3a3a;
+  border-radius: 14px;
+}
+
+.feature h3 {
+  font-family: "Cormorant Garamond", Georgia, serif;
+  font-size: 1.7rem;
+  font-weight: 700;
+  color: #d4af37;
+  margin-bottom: 0.4rem;
+}
+
+.feature p {
+  font-size: 0.92rem;
+  line-height: 1.5;
+  color: #b5b5b5;
+}
+
+/* ===== Mobile ===== */
+@media (max-width: 760px) {
+  body.home .hero-content {
+    padding: 2.25rem 1.5rem;
+  }
+
+  body.home .descript h2 {
+    font-size: 2.3rem;
+  }
+
+  .feature-row {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* ===== Respect reduced motion ===== */
+@media (prefers-reduced-motion: reduce) {
+  body.home .hero-content {
+    animation: none;
+  }
+}

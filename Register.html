@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Register | CrownScore</title>
+
+    <link rel="icon" type="image/png" href="logof.png">
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="Login.css">
+    <link rel="stylesheet" href="auth.css">
+    <link rel="stylesheet" href="stage.css">
+</head>
+<body>
+
+    <main class="login-page">
+
+        <!-- Brand panel -->
+        <section class="brand-panel" aria-hidden="true">
+            <div class="logo-frame">
+                <img src="logof.png" alt="">
+            </div>
+            <p class="brand-tagline">Manage scores, rankings, and events effortlessly.</p>
+        </section>
+
+        <!-- Register card -->
+        <form id="register-form" class="login-card" novalidate>
+            <header class="card-header">
+                <h1>Create your account</h1>
+                <p>Sign up to start managing scores with CrownScore.</p>
+            </header>
+
+            <p id="form-error" class="form-error" role="alert" hidden></p>
+
+            <div class="field">
+                <label for="username">Username</label>
+                <input type="text" id="username" name="username"
+                       placeholder="Choose a username (4-20 characters)"
+                       autocomplete="username" required>
+            </div>
+
+            <div class="field-row">
+                <div class="field">
+                    <label for="password">Password</label>
+                    <div class="password-wrap">
+                        <input type="password" id="password" name="password"
+                               placeholder="At least 8 characters"
+                               autocomplete="new-password" required>
+                        <button type="button" class="toggle-pass" data-target="password"
+                                aria-label="Show password" aria-pressed="false">Show</button>
+                    </div>
+                </div>
+
+                <div class="field">
+                    <label for="confirmpass">Confirm password</label>
+                    <div class="password-wrap">
+                        <input type="password" id="confirmpass" name="confirmpass"
+                               placeholder="Repeat password"
+                               autocomplete="new-password" required>
+                        <button type="button" class="toggle-pass" data-target="confirmpass"
+                                aria-label="Show password" aria-pressed="false">Show</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Security question: pick one, or write your own -->
+            <div class="field">
+                <label for="question-select">Security question</label>
+                <select id="question-select" required>
+                    <option value="" disabled selected>Choose a question</option>
+                    <option>What was the name of your first pet?</option>
+                    <option>What is your mother's maiden name?</option>
+                    <option>In what city were you born?</option>
+                    <option>What was the name of your elementary school?</option>
+                    <option>What was your childhood nickname?</option>
+                    <option value="__custom">Write my own question...</option>
+                </select>
+            </div>
+
+            <!-- This input carries the final question text (read by CrownScore.js) -->
+            <div class="field" id="custom-question-field" hidden>
+                <label for="recovery-question">Your own question</label>
+                <input type="text" id="recovery-question" name="recovery-question"
+                       placeholder="Type the question only you can answer">
+            </div>
+
+            <div class="field">
+                <label for="recovery-answer">Security answer</label>
+                <input type="text" id="recovery-answer" name="recovery-answer"
+                       placeholder="Your answer"
+                       autocomplete="off" required>
+                <p class="field-hint">You'll use this question and answer to reset your password if you forget it.</p>
+            </div>
+
+            <button type="submit" class="btn-login">Create account</button>
+
+            <div class="alt-links">
+                <p>Already have an account? <a href="index.html">Back to login</a></p>
+                <p>Forgot your password? <a href="ForgotPass.html">Reset it</a></p>
+            </div>
+        </form>
+
+    </main>
+
+    <script src="CrownScore.js"></script>
+    <script>
+        // Show / hide password
+        document.querySelectorAll('.toggle-pass').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const input = document.getElementById(btn.dataset.target);
+                const showing = input.type === 'text';
+                input.type = showing ? 'password' : 'text';
+                btn.textContent = showing ? 'Show' : 'Hide';
+                btn.setAttribute('aria-pressed', String(!showing));
+                btn.setAttribute('aria-label', showing ? 'Show password' : 'Hide password');
+            });
+        });
+
+        // Security question: preset or custom
+        const form = document.getElementById('register-form');
+        const errorEl = document.getElementById('form-error');
+        const select = document.getElementById('question-select');
+        const customField = document.getElementById('custom-question-field');
+        const questionInput = document.getElementById('recovery-question');
+
+        select.addEventListener('change', () => {
+            if (select.value === '__custom') {
+                customField.hidden = false;
+                questionInput.value = '';
+                questionInput.focus();
+            } else {
+                customField.hidden = true;
+                questionInput.value = select.value;   // CrownScore.js reads this field
+            }
+        });
+
+        // Validate BEFORE any other submit handler runs
+        document.addEventListener('submit', (e) => {
+            if (e.target !== form) return;
+
+            const username = document.getElementById('username').value.trim();
+            const pass = document.getElementById('password').value;
+            const confirm = document.getElementById('confirmpass').value;
+            const question = questionInput.value.trim();
+            const answer = document.getElementById('recovery-answer').value.trim();
+
+            let problem = '';
+            if (username.length < 4 || username.length > 20 || /\s/.test(username)) {
+                problem = 'Username must be 4-20 characters with no spaces.';
+            } else if (pass.length < 8) {
+                problem = 'Password must be at least 8 characters.';
+            } else if (pass !== confirm) {
+                problem = 'Passwords do not match.';
+            } else if (!select.value) {
+                problem = 'Please choose a security question.';
+            } else if (!question) {
+                problem = 'Please type your own security question.';
+            } else if (!answer) {
+                problem = 'Please enter your security answer.';
+            }
+
+            if (problem) {
+                e.preventDefault();
+                e.stopImmediatePropagation();
+                errorEl.textContent = problem;
+                errorEl.hidden = false;
+                errorEl.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+            } else {
+                errorEl.hidden = true;
+            }
+        }, true);
+    </script>
+    <script src="stage.js"></script>
+</body>
+</html>

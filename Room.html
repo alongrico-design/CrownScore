@@ -1,0 +1,246 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Room | CrownScore</title>
+
+    <link rel="icon" type="image/png" href="logof.png">
+
+    <!-- Shared navigation (same on every page). Keep FIRST -->
+    <link rel="stylesheet" href="nav.css">
+    <!-- Shared stage background (beams + sparkles) -->
+    <link rel="stylesheet" href="stage.css">
+    <!-- Page-only styles -->
+    <link rel="stylesheet" href="room.css">
+    <link rel="stylesheet" href="room-extra.css">
+</head>
+<body>
+
+    <!-- NAVIGATION (identical on every page; only the "active" link changes) -->
+    <header>
+        <nav class="navbar" aria-label="Main">
+            <div class="logo-container">
+                <img src="logof.png" alt="CrownScore Logo" class="nav-logo">
+                <span class="brand-title">CrownScore</span>
+            </div>
+            <div class="navbar-links">
+                <a href="CrownScore.html">Home</a>
+                <a href="Room.html" class="active" aria-current="page">Room</a>
+                <a href="Profile.html">Profile</a>
+                <a href="Guide.html">Guide</a>
+                <a href="index.html" class="btn-logout" onclick="localStorage.removeItem('currentUser')">Logout</a>
+            </div>
+        </nav>
+    </header>
+
+    <main>
+        <!-- STEP 1: Role Selection View -->
+        <div id="role-selection-view" class="card-container">
+            <h2>Select Your Role</h2>
+            <p>Choose how you would like to proceed into the room.</p>
+            <div class="role-buttons">
+                <button type="button" class="btn-role" onclick="showAdminFlow()">
+                    <span class="icon">👑</span> Continue as Admin
+                </button>
+                <button type="button" class="btn-role" onclick="showJudgeFlow()">
+                    <span class="icon">⚖️</span> Continue as Judge
+                </button>
+            </div>
+        </div>
+
+        <!-- STEP 2A: Admin Flow (Room Setup Form) -->
+        <div id="admin-view" class="card-container width-wide hidden">
+            <button class="btn-back" onclick="resetToRoleSelection()">← Back to Role Selection</button>
+            <form id="admin-form" action="#" method="POST" onsubmit="handleAdminSubmit(event)">
+
+                <!-- 1. Room configuration -->
+                <section>
+                    <h2>1. Room Setup</h2>
+                    <p>You have selected to continue as <strong>Admin</strong>.</p>
+
+                    <div class="form-group">
+                        <label for="roomName">Room Name:</label>
+                        <input type="text" id="roomName" name="roomName" placeholder="e.g. Miss Campus 2026" required>
+                    </div>
+
+                    <div class="two-col">
+                        <div class="form-group">
+                            <label for="numJudges">Number of Judges:</label>
+                            <input type="number" id="numJudges" name="numJudges" min="1" max="15" placeholder="e.g. 3" required>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="roomPassword">Room Access Password:</label>
+                            <div class="pass-wrap">
+                                <input type="password" id="roomPassword" name="roomPassword" placeholder="••••••••" required>
+                                <button type="button" class="pass-toggle" id="room-pass-toggle" aria-label="Show password" aria-pressed="false">Show</button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Room ID is generated automatically -->
+                    <div class="room-id-box">
+                        <div>
+                            <span class="room-id-label">Room ID (generated automatically)</span>
+                            <input type="text" id="roomCode" name="roomCode" class="uppercase-input room-id-input" readonly required>
+                        </div>
+                        <button type="button" class="btn-secondary" id="copy-room-id">Copy</button>
+                    </div>
+                    <p class="hint">Share the Room ID and password with your judges.</p>
+                </section>
+
+                <!-- 2. Category & Nested Sub-Criteria Setup -->
+                <section>
+                    <h2>2. Set up Categories & Sub-Criteria</h2>
+                    <p class="hint">Each category's sub-criteria weights must total exactly 100%.</p>
+                    <div id="categories-container">
+                        <div class="category-block scoring-card">
+                            <div class="form-group">
+                                <label class="category-label">Category Name:</label>
+                                <input type="text" class="category-name" placeholder="e.g. BEST IN PRODUCTION NUMBER" required>
+                            </div>
+                            
+                            <label class="sub-criteria-title">Sub-Criteria Breakdown:</label>
+                            <div class="sub-criteria-container">
+                                <div class="criteria-row">
+                                    <input type="text" class="criteria-name" placeholder="e.g. Poise & Bearing" required>
+                                    <input type="number" class="criteria-weight" placeholder="Weight (%)" min="1" max="100" required>
+                                </div>
+                            </div>
+                            <button type="button" class="btn-secondary" onclick="addSubCriteriaInput(this)">+ Add Sub-Criteria</button>
+                        </div>
+                    </div>
+                    <button type="button" class="btn-secondary full-width-btn" onclick="addCategoryInput()">+ Add Category/Segment</button>
+                </section>
+
+                <!-- 3. Candidate roster (belongs to this room only) -->
+                <section>
+                    <h2>3. Candidate Roster</h2>
+                    <p class="hint">Candidates exist only inside this room.</p>
+
+                    <div class="count-row">
+                        <label for="candidateCount">Total number of candidates:</label>
+                        <input type="number" id="candidateCount" min="1" max="100" placeholder="e.g. 10">
+                        <button type="button" class="btn-secondary" id="generate-rows">Generate rows</button>
+                    </div>
+
+                    <div class="candidate-head" aria-hidden="true">
+                        <span>No.</span><span>Name</span><span>Representation / Title</span><span></span>
+                    </div>
+                    <div id="contestant-container">
+                        <div class="candidate-row">
+                            <input type="number" class="candidate-number" min="1" value="1" required aria-label="Candidate number">
+                            <input type="text" class="contestant-input" name="contestantName" placeholder="Full name" required aria-label="Candidate name">
+                            <input type="text" class="candidate-title" placeholder="e.g. Department of Education" aria-label="Representation or title">
+                            <button type="button" class="btn-remove" aria-label="Remove candidate">✕</button>
+                        </div>
+                    </div>
+                    <button type="button" class="btn-secondary" onclick="addContestantInput()">+ Add Candidate</button>
+                </section>
+
+                <!-- 4. Review + start -->
+                <section>
+                    <h2>4. Review & Start</h2>
+                    <div id="setup-summary" class="setup-summary" aria-live="polite"></div>
+                    <p id="setup-error" class="setup-error" role="alert" hidden></p>
+                    <button type="submit" class="btn-primary">Start Judging</button>
+                </section>
+            </form>
+        </div>
+
+        <!-- STEP 3A: Admin Tracking Display / Live Score Dashboard -->
+        <div id="admin-dashboard-view" class="card-container width-extra-wide hidden">
+            <div class="dashboard-header">
+                <div>
+                    <h2>Live Scoring Tracking Display</h2>
+                    <p class="subtitle">Room Status: <strong class="crown-rank">Active Room</strong></p>
+                </div>
+                <div class="header-actions">
+                    <button class="btn-secondary" onclick="exportResults()">📥 Export Results</button>
+                    <button class="btn-primary-danger" onclick="resetToRoleSelection()">End Room</button>
+                </div>
+            </div>
+
+            <!-- Summary Bar -->
+            <div class="summary-cards-grid">
+                <div class="stat-card">
+                    <span class="stat-title">Contestants</span>
+                    <span class="stat-value" id="stat-contestants">0</span>
+                </div>
+                <div class="stat-card">
+                    <span class="stat-title">Total Judges</span>
+                    <span class="stat-value" id="stat-judges">0</span>
+                </div>
+                <div class="stat-card">
+                    <span class="stat-title">Status</span>
+                    <span class="stat-value status-live">● LIVE SCORING</span>
+                </div>
+            </div>
+
+            <!-- Judge Submission Status Tracker -->
+            <div class="dashboard-section">
+                <h3>Judges Submission Status</h3>
+                <div class="judges-status-list" id="judges-status-list">
+                    <!-- Populated dynamically via room.js -->
+                </div>
+            </div>
+
+            <!-- Live Scoring Leaderboard Table -->
+            <div class="dashboard-section">
+                <h3>Live Contestant Rankings & Weighted Scores Breakdown</h3>
+                <div class="table-responsive">
+                    <table class="results-table">
+                        <thead id="scores-table-head">
+                            <!-- Injected dynamically by room.js -->
+                        </thead>
+                        <tbody id="scores-table-body">
+                            <!-- Injected dynamically by room.js -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- STEP 2B: Judge Authentication -->
+        <div id="judge-login-view" class="card-container hidden">
+            <button class="btn-back" onclick="resetToRoleSelection()">← Back to Role Selection</button>
+            <h2>Judge Authentication</h2>
+            <p>Enter the Room ID, select your Judge slot, and enter the password provided by your Admin.</p>
+            
+            <form onsubmit="handleJudgeLogin(event)" class="judge-form-reset">
+                <div class="form-group">
+                    <label for="inputRoomCode">Room ID:</label>
+                    <input type="text" id="inputRoomCode" placeholder="e.g. CS-7K2QX" required class="uppercase-input">
+                </div>
+                <div class="form-group">
+                    <label for="judgeSelect">Select Judge Slot:</label>
+                    <select id="judgeSelect" required>
+                        <option value="1">Judge #1</option>
+                        <option value="2">Judge #2</option>
+                        <option value="3">Judge #3</option>
+                        <option value="4">Judge #4</option>
+                        <option value="5">Judge #5</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="inputRoomPassword">Room Password:</label>
+                    <input type="password" id="inputRoomPassword" placeholder="Enter room password..." required>
+                </div>
+                <button type="submit" class="btn-primary">Enter Room</button>
+            </form>
+        </div>
+
+        <!-- STEP 3B: Judge Scoring Portal -->
+        <div id="judge-portal-view" class="card-container width-wide hidden">
+            <!-- Dynamically populated by room.js -->
+        </div>
+    </main>
+
+
+    <script src="room.js"></script>
+    <!-- Setup helpers: auto Room ID, weight meters, candidate roster. Keep AFTER room.js -->
+    <script src="room-setup.js"></script>
+    <script src="stage.js"></script>
+</body>
+</html>

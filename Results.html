@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Results | CrownScore</title>
+
+    <link rel="icon" type="image/png" href="logof.png">
+
+    <!-- Shared navigation (same on every page). Keep FIRST -->
+    <link rel="stylesheet" href="nav.css">
+    <!-- Shared stage background (beams + sparkles) -->
+    <link rel="stylesheet" href="stage.css">
+    <!-- Page-only styles -->
+    <link rel="stylesheet" href="results.css">
+</head>
+<body>
+
+    <!-- NAVIGATION (identical on every page; only the "active" link changes) -->
+    <header>
+        <nav class="navbar" aria-label="Main">
+            <div class="logo-container">
+                <img src="logof.png" alt="CrownScore Logo" class="nav-logo">
+                <span class="brand-title">CrownScore</span>
+            </div>
+            <div class="navbar-links">
+                <a href="CrownScore.html">Home</a>
+                <a href="Room.html" class="active" aria-current="page">Room</a>
+                <a href="Profile.html">Profile</a>
+                <a href="Guide.html">Guide</a>
+                <a href="index.html" class="btn-logout" onclick="localStorage.removeItem('currentUser')">Logout</a>
+            </div>
+        </nav>
+    </header>
+
+    <main class="results-main">
+
+        <!-- Title + export -->
+        <section class="results-hero">
+            <p class="eyebrow">Official Results</p>
+            <h1 id="event-name">Loading results...</h1>
+            <p class="event-meta-line" id="event-meta"></p>
+
+            <details class="export-menu" id="export-menu">
+                <summary class="btn-download">⬇ Download Official Report</summary>
+                <div class="export-options">
+                    <button type="button" id="export-csv">Excel file (.csv)</button>
+                    <button type="button" id="export-pdf">PDF / Print</button>
+                </div>
+            </details>
+        </section>
+
+        <p id="status-msg" class="status-msg" role="status" hidden></p>
+
+        <div id="results-body" hidden>
+
+            <!-- Podium -->
+            <section class="podium" id="podium" aria-label="Top three"></section>
+
+            <!-- Category awards -->
+            <section class="awards-section">
+                <h2 class="section-title">Category Awards</h2>
+                <div class="awards-grid" id="awards"></div>
+            </section>
+
+            <!-- Full ranking -->
+            <section class="ranking-section">
+                <h2 class="section-title">Final Rankings</h2>
+                <div class="table-scroll">
+                    <table class="rank-table">
+                        <thead id="rank-head"></thead>
+                        <tbody id="rank-body"></tbody>
+                    </table>
+                </div>
+            </section>
+
+            <div class="leave-row">
+                <a class="btn-leave" href="CrownScore.html">Leave results</a>
+            </div>
+        </div>
+
+    </main>
+
+    <script src="results.js"></script>
+    <script src="stage.js"></script>
+</body>
+</html>

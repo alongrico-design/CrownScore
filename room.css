@@ -1,0 +1,490 @@
+
+
+/* Main Container */
+main {
+  flex: 1;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 2.5rem 1rem;
+}
+
+/* Utilities */
+.hidden {
+  display: none !important;
+}
+
+/* Card Containers */
+.card-container {
+  background: rgba(36, 36, 36, 0.95);
+  backdrop-filter: blur(8px);
+  padding: 2.5rem 3rem;
+  border-radius: 12px;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.5);
+  max-width: 600px;
+  width: 100%;
+  border: 1px solid #333;
+  transition: all 0.3s ease;
+}
+
+.card-container.width-wide {
+  max-width: 800px;
+}
+
+.card-container.width-extra-wide {
+  max-width: 1050px;
+}
+
+.btn-back {
+  background: transparent;
+  border: none;
+  color: #aaa;
+  cursor: pointer;
+  font-size: 0.85rem;
+  margin-bottom: 1.25rem;
+  transition: color 0.2s;
+}
+
+.btn-back:hover {
+  color: #d4af37;
+}
+
+/* Role Selection Specifics */
+.role-buttons {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  margin-top: 1.5rem;
+}
+
+.btn-role {
+  background: #1e1e1e;
+  border: 1px solid #333;
+  color: #f5f5f5;
+  padding: 1.25rem;
+  border-radius: 8px;
+  font-size: 1.05rem;
+  font-weight: 600;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  transition: all 0.3s ease;
+}
+
+.btn-role:hover {
+  border-color: #d4af37;
+  background: #2a2a2a;
+  color: #d4af37;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(212, 175, 55, 0.15);
+}
+
+/* Form Styles */
+section {
+  margin-bottom: 1.75rem;
+  padding-bottom: 1.25rem;
+  border-bottom: 1px solid #333;
+}
+
+section:last-of-type {
+  border-bottom: none;
+  margin-bottom: 0;
+  padding-bottom: 0;
+}
+
+h2 {
+  font-size: 1.3rem;
+  color: #d4af37;
+  margin-bottom: 0.5rem;
+  font-weight: 600;
+}
+
+p {
+  color: #aaaaaa;
+  font-size: 0.95rem;
+  line-height: 1.5;
+}
+
+label {
+  display: block;
+  font-size: 0.9rem;
+  color: #dddddd;
+  margin-bottom: 0.4rem;
+  font-weight: 500;
+}
+
+input[type="text"],
+input[type="number"],
+input[type="password"],
+textarea {
+  width: 100%;
+  background-color: #1a1a1a;
+  border: 1px solid #444;
+  color: #ffffff;
+  padding: 0.75rem 1rem;
+  border-radius: 6px;
+  font-size: 0.95rem;
+  transition: border-color 0.3s ease, box-shadow 0.3s ease;
+}
+
+input:focus, textarea:focus {
+  outline: none;
+  border-color: #d4af37;
+  box-shadow: 0 0 8px rgba(212, 175, 55, 0.3);
+}
+
+textarea {
+  resize: vertical;
+}
+
+.btn-secondary {
+  background-color: transparent;
+  color: #d4af37;
+  border: 1px solid #d4af37;
+  padding: 0.5rem 1rem;
+  border-radius: 4px;
+  font-weight: 600;
+  font-size: 0.85rem;
+  cursor: pointer;
+  margin-top: 0.5rem;
+  transition: all 0.3s ease;
+}
+
+.btn-secondary:hover {
+  background-color: rgba(212, 175, 55, 0.1);
+  color: #f1c40f;
+  border-color: #f1c40f;
+}
+
+.btn-primary {
+  width: 100%;
+  background: linear-gradient(135deg, #d4af37 0%, #aa820a 100%);
+  color: #111;
+  border: none;
+  padding: 0.85rem 1.5rem;
+  border-radius: 6px;
+  font-size: 1rem;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  cursor: pointer;
+  box-shadow: 0 4px 15px rgba(212, 175, 55, 0.25);
+  transition: all 0.3s ease;
+}
+
+.btn-primary:hover {
+  background: linear-gradient(135deg, #f1c40f 0%, #d4af37 100%);
+  transform: translateY(-1px);
+  box-shadow: 0 6px 20px rgba(212, 175, 55, 0.4);
+}
+
+/* Judge Scoring Portal Components */
+.portal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-bottom: 1px solid #333;
+  padding-bottom: 0.75rem;
+  margin-bottom: 1rem;
+}
+
+.scoring-card {
+  background: #1a1a1a;
+  border: 1px solid #333;
+  padding: 1.5rem;
+  border-radius: 8px;
+  margin-top: 1rem;
+}
+
+.scoring-card h3 {
+  color: #d4af37;
+  margin-bottom: 1rem;
+  font-size: 1.1rem;
+}
+
+.scoring-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 1rem;
+}
+
+/* Admin Dashboard / Live Scoring Display */
+.dashboard-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  border-bottom: 1px solid #333;
+  padding-bottom: 1.25rem;
+  margin-bottom: 1.5rem;
+  flex-wrap: wrap;
+  gap: 1rem;
+}
+
+.header-actions {
+  display: flex;
+  gap: 10px;
+}
+
+.btn-primary-danger {
+  background: linear-gradient(135deg, #e74c3c 0%, #c0392b 100%);
+  color: #fff;
+  border: none;
+  padding: 0.65rem 1.25rem;
+  border-radius: 6px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.btn-primary-danger:hover {
+  background: linear-gradient(135deg, #ff5e4d 0%, #d63031 100%);
+  box-shadow: 0 4px 12px rgba(231, 76, 60, 0.4);
+}
+
+.summary-cards-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 1rem;
+  margin-bottom: 1.75rem;
+}
+
+.stat-card {
+  background: #1a1a1a;
+  border: 1px solid #333;
+  border-radius: 8px;
+  padding: 1rem 1.25rem;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.stat-title {
+  font-size: 0.8rem;
+  color: #aaa;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.stat-value {
+  font-size: 1.4rem;
+  font-weight: 700;
+  color: #d4af37;
+}
+
+.stat-value.status-live {
+  color: #2ecc71;
+  font-size: 1rem;
+  animation: blink 1.8s infinite;
+}
+
+@keyframes blink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}
+
+.dashboard-section {
+  margin-bottom: 1.75rem;
+}
+
+.dashboard-section h3 {
+  font-size: 1.05rem;
+  color: #dddddd;
+  margin-bottom: 0.85rem;
+}
+
+.judges-status-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.judge-status-badge {
+  background: #1a1a1a;
+  border: 1px solid #444;
+  padding: 0.6rem 1rem;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 0.88rem;
+}
+
+.judge-status-badge.submitted {
+  border-color: #2ecc71;
+  background: rgba(46, 204, 113, 0.08);
+}
+
+.judge-status-badge.submitted .badge-status {
+  color: #2ecc71;
+  font-weight: 600;
+}
+
+.judge-status-badge.pending {
+  border-color: #f1c40f;
+  background: rgba(241, 196, 15, 0.08);
+}
+
+.judge-status-badge.pending .badge-status {
+  color: #f1c40f;
+  font-weight: 500;
+}
+
+.table-responsive {
+  overflow-x: auto;
+}
+
+.results-table {
+  width: 100%;
+  border-collapse: collapse;
+  background: #1a1a1a;
+  border-radius: 8px;
+  overflow: hidden;
+  border: 1px solid #333;
+}
+
+.results-table th,
+.results-table td {
+  padding: 0.85rem 1rem;
+  text-align: center;
+  border-bottom: 1px solid #2a2a2a;
+  font-size: 0.9rem;
+}
+
+.results-table th {
+  background: #111;
+  color: #d4af37;
+  font-weight: 600;
+  text-transform: uppercase;
+  font-size: 0.8rem;
+  letter-spacing: 0.5px;
+}
+
+.results-table td:nth-child(2) {
+  text-align: left;
+}
+
+.results-table tbody tr:hover {
+  background-color: rgba(212, 175, 55, 0.05);
+}
+
+.results-table tr.rank-1 {
+  background: rgba(212, 175, 55, 0.1);
+}
+
+.crown-rank {
+  color: #f1c40f;
+  font-weight: 700;
+}
+
+.rank-num {
+  color: #aaa;
+  font-weight: 600;
+}
+
+.score-total {
+  color: #d4af37;
+  font-weight: 700;
+  font-size: 1rem;
+}
+
+/* Dynamic Criteria Form Rows */
+.criteria-row {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 10px;
+  align-items: center;
+}
+
+.criteria-name {
+  flex: 2;
+}
+
+.criteria-weight {
+  flex: 1;
+}
+
+/* Criteria Pill Badges in Judge Portal */
+.criteria-badge {
+  display: inline-block;
+  background: rgba(212, 175, 55, 0.15);
+  color: #d4af37;
+  padding: 2px 8px;
+  border-radius: 12px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  margin-left: 6px;
+  border: 1px solid rgba(212, 175, 55, 0.3);
+}
+
+/* Winner Row Highlight in Admin Leaderboard */
+.results-table tbody tr.rank-1 {
+  background: rgba(212, 175, 55, 0.15) !important;
+  border-left: 4px solid #d4af37;
+}
+
+.results-table tbody tr.rank-1 td {
+  color: #ffffff;
+  font-weight: 600;
+}
+
+.crown-rank {
+  color: #f1c40f;
+  font-weight: 800;
+  font-size: 1.1rem;
+}
+
+/* Custom Select Dropdown Styling */
+select#judgeSelect {
+  width: 100%;
+  background-color: #1a1a1a;
+  border: 1px solid #444;
+  color: #ffffff;
+  padding: 0.75rem 1rem;
+  border-radius: 6px;
+  font-size: 0.95rem;
+  cursor: pointer;
+  transition: border-color 0.3s ease;
+}
+
+select#judgeSelect:focus {
+  outline: none;
+  border-color: #d4af37;
+  box-shadow: 0 0 8px rgba(212, 175, 55, 0.3);
+}
+
+/* Supplementary Utility Classes */
+.form-group {
+  margin-bottom: 1rem;
+}
+
+.category-label {
+  font-weight: 600;
+  color: #d4af37;
+}
+
+.sub-criteria-title {
+  font-size: 0.88rem;
+  color: #aaa;
+  margin-top: 0.75rem;
+}
+
+.sub-criteria-container {
+  margin-top: 0.5rem;
+}
+
+.full-width-btn {
+  width: 100%;
+}
+
+.uppercase-input {
+  text-transform: uppercase;
+}
+
+.judge-form-reset {
+  box-shadow: none;
+  padding: 0;
+  border: none;
+  margin-top: 1.25rem;
+}

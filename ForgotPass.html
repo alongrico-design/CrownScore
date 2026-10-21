@@ -1,0 +1,241 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Forgot Password | CrownScore</title>
+
+    <link rel="icon" type="image/png" href="logof.png">
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="Login.css">
+    <link rel="stylesheet" href="auth.css">
+    <link rel="stylesheet" href="stage.css">
+</head>
+<body>
+
+    <main class="login-page">
+
+        <!-- Brand panel -->
+        <section class="brand-panel" aria-hidden="true">
+            <div class="logo-frame">
+                <img src="logof.png" alt="">
+            </div>
+            <p class="brand-tagline">Manage scores, rankings, and events effortlessly.</p>
+        </section>
+
+        <!-- Forgot password card -->
+        <form id="forgotpassword-form" class="login-card" novalidate>
+            <header class="card-header">
+                <h1>Reset your password</h1>
+                <p>Enter your username and we'll show the security question you saved.</p>
+            </header>
+
+            <!-- 3-step progress -->
+            <ol class="stepper" aria-label="Reset progress">
+                <li id="step-1" class="current">Username</li>
+                <li id="step-2">Security question</li>
+                <li id="step-3">New password</li>
+            </ol>
+
+            <p id="form-error" class="form-error" role="alert" hidden></p>
+
+            <!-- STEP 1: username -->
+            <div class="field">
+                <label for="username">Username</label>
+                <input type="text" id="username" name="username"
+                       placeholder="Enter your username"
+                       autocomplete="username" required>
+                <button type="button" class="link-btn" id="change-user" hidden>Use a different username</button>
+            </div>
+
+            <button type="button" class="btn-outline-gold" id="find-account">Find my account</button>
+
+            <!-- STEP 2 + 3: revealed after the question is found -->
+            <div class="reset-panel" id="reset-panel" hidden>
+
+                <!-- Read-only: loaded automatically from the saved account -->
+                <div class="field">
+                    <label for="recovery-question">Your security question</label>
+                    <input type="text" id="recovery-question" name="recovery-question"
+                           readonly tabindex="-1">
+                    <p class="field-hint">This is the question you saved when you registered. It can't be changed here.</p>
+                </div>
+
+                <div class="field">
+                    <label for="recovery-answer">Security answer</label>
+                    <input type="text" id="recovery-answer" name="recovery-answer"
+                           placeholder="Enter your answer"
+                           autocomplete="off" required>
+                </div>
+
+                <div class="field-row">
+                    <div class="field">
+                        <label for="new-password">New password</label>
+                        <div class="password-wrap">
+                            <input type="password" id="new-password" name="new-password"
+                                   placeholder="At least 8 characters"
+                                   autocomplete="new-password" required>
+                            <button type="button" class="toggle-pass" data-target="new-password"
+                                    aria-label="Show password" aria-pressed="false">Show</button>
+                        </div>
+                    </div>
+
+                    <div class="field">
+                        <label for="confirm-password">Confirm password</label>
+                        <div class="password-wrap">
+                            <input type="password" id="confirm-password" name="confirm-pass"
+                                   placeholder="Repeat password"
+                                   autocomplete="new-password" required>
+                            <button type="button" class="toggle-pass" data-target="confirm-password"
+                                    aria-label="Show password" aria-pressed="false">Show</button>
+                        </div>
+                    </div>
+                </div>
+
+                <button type="submit" class="btn-login">Reset password</button>
+            </div>
+
+            <div class="alt-links">
+                <p>Remembered it? <a href="index.html">Back to login</a></p>
+                <p>New to CrownScore? <a href="Register.html">Create an account</a></p>
+            </div>
+        </form>
+
+    </main>
+
+    <script src="CrownScore.js"></script>
+    <script>
+        window.API_BASE_URL = window.API_BASE_URL || 'http://localhost:3000/api';
+
+        const form = document.getElementById('forgotpassword-form');
+        const errorEl = document.getElementById('form-error');
+        const userInput = document.getElementById('username');
+        const findBtn = document.getElementById('find-account');
+        const changeBtn = document.getElementById('change-user');
+        const panel = document.getElementById('reset-panel');
+        const questionInput = document.getElementById('recovery-question');
+        const steps = [1, 2, 3].map(n => document.getElementById('step-' + n));
+
+        function showError(msg) {
+            errorEl.textContent = msg;
+            errorEl.hidden = false;
+        }
+
+        function hideError() {
+            errorEl.hidden = true;
+            errorEl.textContent = '';
+        }
+
+        // 1 = username, 2 = question shown, 3 = new password
+        function setStep(n) {
+            steps.forEach((el, i) => {
+                el.className = i + 1 < n ? 'done' : (i + 1 === n ? 'current' : '');
+            });
+        }
+
+        // Show / hide password
+        document.querySelectorAll('.toggle-pass').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const input = document.getElementById(btn.dataset.target);
+                const showing = input.type === 'text';
+                input.type = showing ? 'password' : 'text';
+                btn.textContent = showing ? 'Show' : 'Hide';
+                btn.setAttribute('aria-pressed', String(!showing));
+                btn.setAttribute('aria-label', showing ? 'Show password' : 'Hide password');
+            });
+        });
+
+        // STEP 1 -> 2: fetch the saved security question for this username
+        async function findAccount() {
+            hideError();
+            const username = userInput.value.trim();
+            if (!username) {
+                showError('Please enter your username.');
+                userInput.focus();
+                return;
+            }
+
+            findBtn.disabled = true;
+            findBtn.textContent = 'Searching...';
+
+            try {
+                const res = await fetch(
+                    `${API_BASE_URL}/security-question?username=${encodeURIComponent(username)}`,
+                    { headers: { 'ngrok-skip-browser-warning': 'true' } }
+                );
+                const data = await res.json().catch(() => ({}));
+
+                if (!res.ok || !data.question) {
+                    showError(data.message || "We couldn't find that username.");
+                    return;
+                }
+
+                questionInput.value = data.question;      // auto-filled, read-only
+                userInput.readOnly = true;
+                findBtn.hidden = true;
+                changeBtn.hidden = false;
+                panel.hidden = false;
+                setStep(3);
+                document.getElementById('recovery-answer').focus();
+
+            } catch (err) {
+                console.error('Lookup error:', err);
+                showError('Server connection error. Make sure server.js is running.');
+            } finally {
+                findBtn.disabled = false;
+                findBtn.textContent = 'Find my account';
+            }
+        }
+
+        function startOver() {
+            hideError();
+            panel.hidden = true;
+            questionInput.value = '';
+            userInput.readOnly = false;
+            findBtn.hidden = false;
+            changeBtn.hidden = true;
+            setStep(1);
+            userInput.focus();
+        }
+
+        findBtn.addEventListener('click', findAccount);
+        changeBtn.addEventListener('click', startOver);
+
+        // Enter in the username box = Find my account (not submit)
+        userInput.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter' && panel.hidden) {
+                e.preventDefault();
+                findAccount();
+            }
+        });
+
+        // STEP 3: validate BEFORE any other submit handler runs
+        document.addEventListener('submit', (e) => {
+            if (e.target !== form) return;
+
+            let problem = '';
+            if (panel.hidden) {
+                problem = 'Find your account first by entering your username.';
+            } else if (!document.getElementById('recovery-answer').value.trim()) {
+                problem = 'Please enter your security answer.';
+            } else if (document.getElementById('new-password').value.length < 8) {
+                problem = 'New password must be at least 8 characters.';
+            } else if (document.getElementById('new-password').value !== document.getElementById('confirm-password').value) {
+                problem = 'Passwords do not match.';
+            }
+
+            if (problem) {
+                e.preventDefault();
+                e.stopImmediatePropagation();
+                showError(problem);
+            } else {
+                hideError();
+            }
+        }, true);
+    </script>
+    <script src="stage.js"></script>
+</body>
+</html>

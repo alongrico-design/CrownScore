@@ -1,0 +1,237 @@
+/* =====================================================
+   room-extra.css - Room setup additions
+   Link it AFTER room.css.
+   ===================================================== */
+
+/* ===== Small helpers ===== */
+.hint {
+  margin: 0.3rem 0 0.9rem;
+  font-size: 0.85rem;
+  color: #888;
+}
+
+.two-col {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+}
+
+.two-col .form-group { min-width: 0; }
+
+/* ===== Password with Show/Hide ===== */
+.pass-wrap { position: relative; }
+.pass-wrap input { padding-right: 4.2rem; }
+
+.pass-toggle {
+  position: absolute;
+  top: 50%;
+  right: 0.45rem;
+  transform: translateY(-50%);
+  padding: 0.3rem 0.55rem;
+  font: inherit;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: #d4af37;
+  background: none;
+  border: none;
+  cursor: pointer;
+}
+
+.pass-toggle:hover { color: #f1c40f; }
+
+/* ===== Auto-generated Room ID ===== */
+.room-id-box {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.9rem 1rem;
+  background: rgba(212, 175, 55, 0.08);
+  border: 1px dashed rgba(212, 175, 55, 0.5);
+  border-radius: 8px;
+}
+
+.room-id-box > div { flex: 1; }
+
+.room-id-label {
+  display: block;
+  margin-bottom: 0.3rem;
+  font-size: 0.78rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #aaa;
+}
+
+.room-id-input {
+  padding: 0.2rem 0;
+  font-family: 'Cormorant Garamond', Georgia, serif;
+  font-size: 1.9rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  color: #f1d27a;
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+  cursor: default;
+}
+
+.room-id-box .btn-secondary { margin-top: 0; }
+
+/* ===== Weight meter (per category) ===== */
+.category-weight-group { max-width: 260px; }
+
+.weight-tools {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-top: 1rem;
+  padding-top: 0.9rem;
+  border-top: 1px dashed #333;
+}
+
+.meter {
+  flex: 1;
+  min-width: 220px;
+}
+
+.meter-track {
+  height: 8px;
+  overflow: hidden;
+  background: #2a2a2a;
+  border-radius: 999px;
+}
+
+.meter-bar {
+  height: 100%;
+  width: 0;
+  background: #f1c40f;
+  border-radius: 999px;
+  transition: width 0.25s ease, background 0.25s ease;
+}
+
+.meter-text {
+  display: block;
+  margin-top: 0.35rem;
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: #f1c40f;
+}
+
+.meter[data-state="exact"] .meter-bar { background: #2ecc71; }
+.meter[data-state="exact"] .meter-text { color: #2ecc71; }
+.meter[data-state="over"]  .meter-bar { background: #e74c3c; }
+.meter[data-state="over"]  .meter-text { color: #ff7b7b; }
+
+.btn-link {
+  padding: 0;
+  font: inherit;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #d4af37;
+  background: none;
+  border: none;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.btn-link:hover { color: #f1c40f; }
+
+.category-block.is-invalid {
+  border-color: #e74c3c;
+  box-shadow: 0 0 0 2px rgba(231, 76, 60, 0.25);
+}
+
+/* ===== Candidate roster ===== */
+.count-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+}
+
+.count-row label { margin: 0; }
+.count-row input { width: 110px; }
+.count-row .btn-secondary { margin-top: 0; }
+
+.candidate-head,
+.candidate-row {
+  display: grid;
+  grid-template-columns: 70px 1.4fr 1.6fr 38px;
+  gap: 0.6rem;
+  align-items: center;
+}
+
+.candidate-head {
+  margin-bottom: 0.4rem;
+  font-size: 0.75rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #888;
+}
+
+.candidate-row { margin-bottom: 0.6rem; }
+
+.btn-remove {
+  width: 38px;
+  height: 38px;
+  font-size: 0.9rem;
+  color: #ff7b7b;
+  background: transparent;
+  border: 1px solid #444;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: background 0.2s, border-color 0.2s;
+}
+
+.btn-remove:hover {
+  background: rgba(231, 76, 60, 0.12);
+  border-color: #e74c3c;
+}
+
+/* ===== Review + validation ===== */
+.setup-summary {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+  margin-bottom: 1rem;
+}
+
+.sum-chip {
+  padding: 0.4rem 0.8rem;
+  font-size: 0.85rem;
+  color: #ddd;
+  background: #1a1a1a;
+  border: 1px solid #333;
+  border-radius: 999px;
+}
+
+.sum-chip strong { color: #d4af37; }
+.sum-chip.ok  { border-color: #2ecc71; color: #2ecc71; }
+.sum-chip.bad { border-color: #e74c3c; color: #ff7b7b; }
+
+.setup-error {
+  margin-bottom: 1rem;
+  padding: 0.75rem 1rem;
+  font-size: 0.9rem;
+  color: #ff7b7b;
+  background: rgba(255, 123, 123, 0.1);
+  border: 1px solid rgba(255, 123, 123, 0.4);
+  border-radius: 8px;
+}
+
+.setup-error[hidden] { display: none; }
+
+@media (max-width: 640px) {
+  .two-col { grid-template-columns: 1fr; }
+
+  .candidate-head { display: none; }
+
+  .candidate-row {
+    grid-template-columns: 70px 1fr 38px;
+  }
+
+  .candidate-row .candidate-title { grid-column: 1 / 3; }
+}

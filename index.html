@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login | CrownScore</title>
+
+    <link rel="icon" type="image/png" href="logof.png">
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="Login.css">
+    <link rel="stylesheet" href="stage.css">
+</head>
+<body>
+
+    <main class="login-page">
+
+        <!-- Brand panel -->
+        <section class="brand-panel" aria-hidden="true">
+            <div class="logo-frame">
+                <!-- Change this path to your CrownScore logo file -->
+                <img src="logof.png" alt="">
+            </div>
+            <p class="brand-tagline">Manage scores, rankings, and events effortlessly.</p>
+        </section>
+
+        <!-- Login card -->
+        <form id="login-form" class="login-card" novalidate>
+            <header class="card-header">
+                <h1>Welcome! </h1>
+                <p>Log in to continue to CrownScore.</p>
+            </header>
+
+            <p id="login-error" class="form-error" role="alert" hidden></p>
+
+            <div class="field">
+                <label for="username">Username</label>
+                <input type="text" id="username" name="username"
+                       placeholder="Enter your username"
+                       autocomplete="username" required>
+            </div>
+
+            <div class="field">
+                <label for="password">Password</label>
+                <div class="password-wrap">
+                    <input type="password" id="password" name="password"
+                           placeholder="Enter your password"
+                           autocomplete="current-password" required>
+                    <button type="button" class="toggle-pass" id="toggle-pass"
+                            aria-label="Show password" aria-pressed="false">Show</button>
+                </div>
+                <a class="forgot-link" href="ForgotPass.html">Forgot password?</a>
+            </div>
+
+            <button type="submit" class="btn-login">Login</button>
+
+            <p class="signup-row">
+                New to CrownScore? <a href="Register.html">Create an account</a>
+            </p>
+        </form>
+
+    </main>
+
+    <script src="CrownScore.js"></script>
+    <script>
+        // Show / hide password
+        const passInput = document.getElementById('password');
+        const toggleBtn = document.getElementById('toggle-pass');
+
+        toggleBtn.addEventListener('click', () => {
+            const showing = passInput.type === 'text';
+            passInput.type = showing ? 'password' : 'text';
+            toggleBtn.textContent = showing ? 'Show' : 'Hide';
+            toggleBtn.setAttribute('aria-pressed', String(!showing));
+            toggleBtn.setAttribute('aria-label', showing ? 'Show password' : 'Hide password');
+        });
+
+        // Handle Login Submission & Store User Session
+        const loginForm = document.getElementById('login-form');
+        const errorEl = document.getElementById('login-error');
+
+        loginForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            errorEl.hidden = true;
+            errorEl.textContent = '';
+
+            const usernameInput = document.getElementById('username').value.trim();
+            const passwordInput = document.getElementById('password').value.trim();
+
+            if (!usernameInput || !passwordInput) {
+                errorEl.textContent = 'Please provide both username and password.';
+                errorEl.hidden = false;
+                return;
+            }
+
+            try {
+                const response = await fetch('https://donor-hurry-blatancy.ngrok-free.dev/api/login', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ username: usernameInput, password: passwordInput })
+                });
+
+                const data = await response.json();
+
+                if (!response.ok) {
+                    errorEl.textContent = data.message || 'Invalid username or password.';
+                    errorEl.hidden = false;
+                    return;
+                }
+
+                // Save logged-in user details to localStorage
+                localStorage.setItem('currentUser', JSON.stringify(data.user));
+
+                // Redirect to Profile page
+                window.location.href = 'Profile.html';
+
+            } catch (err) {
+                console.error('Login error:', err);
+                errorEl.textContent = 'Server connection error. Make sure server.js is running.';
+                errorEl.hidden = false;
+            }
+        });
+    </script>
+    <script src="stage.js"></script>
+</body>
+</html>
