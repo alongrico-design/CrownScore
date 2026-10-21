@@ -203,7 +203,7 @@ header::after {
 }
 
 /* ==========================================================================
-   GLOBAL LOGOUT CONFIRMATION MODAL STYLES
+   GLOBAL LOGOUT CONFIRMATION MODAL STYLES (LOADED ON ALL PAGES)
    ========================================================================== */
 .modal-overlay {
   position: fixed;
@@ -216,10 +216,9 @@ header::after {
   display: flex;
   align-items: center;
   justify-content: center;
-  z-index: 99999 !important; /* Forces modal over headers and backgrounds */
+  z-index: 99999 !important;
 }
 
-/* Ensure hidden attribute takes precedence */
 .modal-overlay[hidden] {
   display: none !important;
 }
@@ -254,4 +253,38 @@ header::after {
   display: flex;
   gap: 12px;
   justify-content: center;
+}
+
+/* Explicit Cancel Button Styling (Overrides default unstyled buttons across all pages) */
+.modal-actions #btn-cancel-logout {
+  background: transparent;
+  color: #d4af37;
+  border: 1px solid #d4af37;
+  padding: 10px 20px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: 600;
+  font-size: 0.95rem;
+  transition: all 0.2s ease;
+}
+
+.modal-actions #btn-cancel-logout:hover {
+  background: rgba(212, 175, 55, 0.15);
+}
+
+/* Explicit Confirm Logout Button Styling */
+.modal-actions #btn-confirm-logout {
+  background: #e74c3c;
+  color: #ffffff;
+  border: none;
+  padding: 10px 20px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: 600;
+  font-size: 0.95rem;
+  transition: background 0.2s ease;
+}
+
+.modal-actions #btn-confirm-logout:hover {
+  background: #c0392b;
 }
