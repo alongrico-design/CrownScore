@@ -654,21 +654,29 @@ app.post('/api/scores/submit', async (req, res) => {
     if (!cont.length) return res.status(400).json({ message: 'That candidate is not in this room.' });
 
     const [crits] = await db.query(
-      `SELECT cr.criteria_id FROM criteria cr
+      `SELECT cr.criteria_id, cr.category_id FROM criteria cr
        JOIN categories ca ON ca.category_id = cr.category_id WHERE ca.room_id = ?`,
       [roomId]
     );
-    const valid = new Set(crits.map(c => Number(c.criteria_id)));
+    const critToCat = new Map(crits.map(c => [Number(c.criteria_id), Number(c.category_id)]));
 
     const sent = new Set();
+    const touchedCategories = new Set();
     for (const s of scores) {
+      const cid = Number(s.criteriaId);
       const n = Number(s.score);
-      if (!valid.has(Number(s.criteriaId))) return res.status(400).json({ message: 'Unknown sub-criterion.' });
+      if (!critToCat.has(cid)) return res.status(400).json({ message: 'Unknown sub-criterion.' });
       if (isNaN(n) || n < 0 || n > 100) return res.status(400).json({ message: 'Scores must be between 0 and 100.' });
-      sent.add(Number(s.criteriaId));
+      sent.add(cid);
+      touchedCategories.add(critToCat.get(cid));
     }
-    if (final && sent.size !== valid.size) {
-      return res.status(400).json({ message: 'Please score every sub-criterion before submitting.' });
+
+    // Verify all sub-criteria within the submitted category(s) are included
+    if (final) {
+      const expectedInCategories = crits.filter(c => touchedCategories.has(Number(c.category_id)));
+      if (sent.size !== expectedInCategories.length) {
+        return res.status(400).json({ message: 'Please score every sub-criterion in this category before advancing.' });
+      }
     }
 
     // Check if any of the specific submitted criteria for this contestant are already locked
