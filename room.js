@@ -1,5 +1,5 @@
 /* ==========================================================================
-   room.js - Pageant Room Setup, Kahoot-Style Judging Flow & Live Leaderboard
+   room.js - Pageant Room Setup, Strict Kahoot-Style Judging & Live Tracking
    ========================================================================== */
 
 const API_BASE_URL = (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')
@@ -13,23 +13,29 @@ let currentRoom = {
   name: '',
   password: '',
   numJudges: 0,
-  categories: [],   // Array of { id, name, weight, criteria: [{ id, name, weight }] }
-  contestants: [],  // Array of { id, number, name, representation }
-  scores: [],       // Raw score rows from API
+  categories: [],
+  contestants: [],
+  scores: [],
+  judgeProgress: {},
+  allowNext: true,
   activeJudgeNumber: null
 };
 
 let pollInterval = null;
+let judgeHeartbeatInterval = null;
 
 // --- KAHOOT-STYLE WIZARD STATE ---
 let wizardCatIdx = 0;
 let wizardCandIdx = 0;
 let wizardScoreDrafts = {}; // Format: { "contestantId_criteriaId": value }
-let isScoresLocked = false;
+let lockedSteps = new Set(); // Format: Set("catIdx_candIdx")
+let isAllScoresSubmitted = false;
+let isSavingStep = false;
 
-// Initialize Logout Guard on DOM load
+// Initialize on DOM load (including URL session recovery from Profile "Manage")
 document.addEventListener('DOMContentLoaded', () => {
   initLogoutModalGuard();
+  checkAutoResumeFromUrl();
 });
 
 // --- USER HELPER ---
@@ -39,6 +45,51 @@ function getLoggedInUser() {
     return user || null;
   } catch (e) {
     return null;
+  }
+}
+
+// --- AUTO-RESUME SESSION FROM PROFILE ("MANAGE") ---
+async function checkAutoResumeFromUrl() {
+  const params = new URLSearchParams(window.location.search);
+  const roomCode = params.get('room');
+  if (!roomCode) return;
+
+  const user = getLoggedInUser();
+  if (!user || !user.id) {
+    window.location.href = 'index.html';
+    return;
+  }
+
+  try {
+    const res = await fetch(`${API_BASE_URL}/rooms/by-code/${encodeURIComponent(roomCode)}?userId=${user.id}`);
+    const room = await res.json();
+
+    if (!res.ok) {
+      alert(room.message || 'Unable to resume room session.');
+      return;
+    }
+
+    currentRoom.id = room.id;
+    currentRoom.code = room.code;
+    currentRoom.name = room.room_name;
+    currentRoom.numJudges = room.num_judges;
+    currentRoom.categories = room.categories;
+    currentRoom.contestants = room.contestants;
+    currentRoom.allowNext = room.allowNext !== undefined ? room.allowNext : true;
+    currentRoom.activeJudgeNumber = room.judgeNumber;
+
+    if (room.role === 'admin') {
+      startLiveScorePolling();
+      renderAdminDashboard();
+      hideAllViews();
+      document.getElementById('admin-dashboard-view').classList.remove('hidden');
+    } else if (room.role === 'judge') {
+      await initKahootStylePortal();
+      hideAllViews();
+      document.getElementById('judge-portal-view').classList.remove('hidden');
+    }
+  } catch (err) {
+    console.error('Auto-resume error:', err);
   }
 }
 
@@ -70,6 +121,17 @@ function initLogoutModalGuard() {
 }
 
 // --- NAVIGATION & VIEWS ---
+function stopAllIntervals() {
+  if (pollInterval) {
+    clearInterval(pollInterval);
+    pollInterval = null;
+  }
+  if (judgeHeartbeatInterval) {
+    clearInterval(judgeHeartbeatInterval);
+    judgeHeartbeatInterval = null;
+  }
+}
+
 function hideAllViews() {
   document.getElementById('role-selection-view').classList.add('hidden');
   document.getElementById('admin-view').classList.add('hidden');
@@ -79,9 +141,10 @@ function hideAllViews() {
 }
 
 function resetToRoleSelection() {
-  if (pollInterval) {
-    clearInterval(pollInterval);
-    pollInterval = null;
+  stopAllIntervals();
+  // Clean URL query params if returning to role selection
+  if (window.history.replaceState) {
+    window.history.replaceState({}, document.title, 'Room.html');
   }
   hideAllViews();
   document.getElementById('role-selection-view').classList.remove('hidden');
@@ -143,7 +206,6 @@ function addSubCriteriaInput(btn) {
   container.appendChild(row);
 }
 
-// Fallback if room-setup.js is not present
 if (typeof window.addContestantInput !== 'function') {
   window.addContestantInput = function() {
     const container = document.getElementById('contestant-container');
@@ -258,6 +320,7 @@ async function handleAdminSubmit(e) {
     currentRoom.numJudges = numJudges;
     currentRoom.categories = result.categories;
     currentRoom.contestants = result.contestants;
+    currentRoom.allowNext = true;
 
     startLiveScorePolling();
     renderAdminDashboard();
@@ -271,11 +334,53 @@ async function handleAdminSubmit(e) {
   }
 }
 
-// --- LIVE SCORE POLLING ---
+// --- ADMIN PACING CONTROL (ALLOW / PROHIBIT NEXT) ---
+async function toggleAdminAllowNext() {
+  const user = getLoggedInUser();
+  if (!user || !currentRoom.id) return;
+
+  const newState = !currentRoom.allowNext;
+
+  try {
+    const res = await fetch(`${API_BASE_URL}/rooms/${currentRoom.id}/toggle-next`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ userId: user.id, allowNext: newState })
+    });
+
+    if (res.ok) {
+      const data = await res.json();
+      currentRoom.allowNext = data.allowNext;
+      renderAdminDashboard();
+    }
+  } catch (err) {
+    console.error('Error toggling pacing control:', err);
+  }
+}
+
+async function endActiveRoom() {
+  const user = getLoggedInUser();
+  if (!user || !currentRoom.id) return;
+
+  if (!confirm('Are you sure you want to end this room and finalize the event?')) return;
+
+  try {
+    await fetch(`${API_BASE_URL}/rooms/${currentRoom.id}/complete`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ userId: user.id })
+    });
+  } catch (err) {
+    console.error('Error ending room:', err);
+  }
+  resetToRoleSelection();
+}
+
+// --- LIVE SCORE POLLING (ADMIN) ---
 function startLiveScorePolling() {
   fetchLiveScores();
   if (pollInterval) clearInterval(pollInterval);
-  pollInterval = setInterval(fetchLiveScores, 3000);
+  pollInterval = setInterval(fetchLiveScores, 2500);
 }
 
 async function fetchLiveScores() {
@@ -286,7 +391,9 @@ async function fetchLiveScores() {
     const res = await fetch(`${API_BASE_URL}/rooms/${currentRoom.id}/scores?userId=${user.id}`);
     if (res.ok) {
       const data = await res.json();
-      currentRoom.scores = data;
+      currentRoom.scores = Array.isArray(data) ? data : (data.scores || []);
+      if (data.allowNext !== undefined) currentRoom.allowNext = data.allowNext;
+      if (data.judgeProgress) currentRoom.judgeProgress = data.judgeProgress;
       renderAdminDashboard();
     }
   } catch (err) {
@@ -296,27 +403,65 @@ async function fetchLiveScores() {
 
 // --- RENDER ADMIN DASHBOARD ---
 function renderAdminDashboard() {
+  const titleEl = document.getElementById('admin-dashboard-title');
+  const codeEl = document.getElementById('admin-room-code-display');
+  if (titleEl && currentRoom.name) titleEl.textContent = `${currentRoom.name} — Live Tracking`;
+  if (codeEl && currentRoom.code) codeEl.textContent = currentRoom.code;
+
   const contestantsEl = document.getElementById('stat-contestants');
   const judgesEl = document.getElementById('stat-judges');
   if (contestantsEl) contestantsEl.textContent = currentRoom.contestants.length;
   if (judgesEl) judgesEl.textContent = currentRoom.numJudges;
 
+  // Update Pacing Control Button & Status Card
+  const pacingBtn = document.getElementById('btn-toggle-judge-next');
+  const pacingStat = document.getElementById('stat-pacing-status');
+  if (pacingBtn) {
+    if (currentRoom.allowNext) {
+      pacingBtn.className = 'btn-pacing allowed';
+      pacingBtn.textContent = '🔓 Next Button: ALLOWED';
+    } else {
+      pacingBtn.className = 'btn-pacing prohibited';
+      pacingBtn.textContent = '🔒 Next Button: LOCKED';
+    }
+  }
+  if (pacingStat) {
+    pacingStat.textContent = currentRoom.allowNext ? 'Judges Unlocked' : 'Advancement Paused';
+    pacingStat.style.color = currentRoom.allowNext ? '#2ecc71' : '#e74c3c';
+  }
+
+  // Calculate total expected score entries per judge
+  let totalExpectedPerJudge = 0;
+  currentRoom.categories.forEach(cat => {
+    totalExpectedPerJudge += (cat.criteria ? cat.criteria.length : 0) * currentRoom.contestants.length;
+  });
+
   const judgesList = document.getElementById('judges-status-list');
   if (judgesList) {
     judgesList.innerHTML = '';
-    const submittedJudges = new Set(
-      currentRoom.scores
-        .filter(s => s.is_final === 1 || s.is_final === true)
-        .map(s => s.judge_number)
-    );
 
     for (let j = 1; j <= currentRoom.numJudges; j++) {
-      const isSubmitted = submittedJudges.has(j);
+      const judgeScoreRows = currentRoom.scores.filter(s => s.judge_number === j);
+      const isComplete = totalExpectedPerJudge > 0 && judgeScoreRows.length >= totalExpectedPerJudge;
+      const liveInfo = currentRoom.judgeProgress && currentRoom.judgeProgress[j];
+
+      let statusLabel = '⏳ Waiting to join...';
+      let badgeClass = 'pending';
+
+      if (isComplete) {
+        statusLabel = '✅ Completed All Categories';
+        badgeClass = 'submitted';
+      } else if (liveInfo && liveInfo.statusText) {
+        statusLabel = `📝 ${liveInfo.statusText}`;
+      } else if (judgeScoreRows.length > 0) {
+        statusLabel = `📝 Scoring in progress (${judgeScoreRows.length}/${totalExpectedPerJudge} criteria)`;
+      }
+
       const badge = document.createElement('div');
-      badge.className = `judge-status-badge ${isSubmitted ? 'submitted' : 'pending'}`;
+      badge.className = `judge-status-badge ${badgeClass}`;
       badge.innerHTML = `
         <span class="judge-name">Judge #${j}</span>: 
-        <span class="badge-status">${isSubmitted ? '✅ Submitted' : '⏳ Scoring...'}</span>
+        <span class="badge-status">${statusLabel}</span>
       `;
       judgesList.appendChild(badge);
     }
@@ -328,7 +473,7 @@ function renderAdminDashboard() {
     for (let j = 1; j <= currentRoom.numJudges; j++) {
       headHTML += `<th>Judge #${j}</th>`;
     }
-    headHTML += `<th>Final Weighted Score</th></tr>`;
+    headHTML += `<th>Live Weighted Average</th></tr>`;
     tableHead.innerHTML = headHTML;
   }
 
@@ -350,7 +495,7 @@ function renderLeaderboardRows() {
   let contestantResults = currentRoom.contestants.map(contestant => {
     let judgeTotals = [];
     let grandTotal = 0;
-    let submittedJudgeCount = 0;
+    let activeJudgeCount = 0;
 
     for (let j = 1; j <= currentRoom.numJudges; j++) {
       const judgeScores = currentRoom.scores.filter(
@@ -367,13 +512,13 @@ function renderLeaderboardRows() {
         });
         judgeTotals.push(judgeTotal.toFixed(2));
         grandTotal += judgeTotal;
-        submittedJudgeCount++;
+        activeJudgeCount++;
       } else {
         judgeTotals.push('—');
       }
     }
 
-    const finalAverage = submittedJudgeCount > 0 ? (grandTotal / submittedJudgeCount).toFixed(2) : '0.00';
+    const finalAverage = activeJudgeCount > 0 ? (grandTotal / activeJudgeCount).toFixed(2) : '0.00';
 
     return {
       name: contestant.name,
@@ -441,6 +586,7 @@ async function handleJudgeLogin(e) {
     currentRoom.numJudges = room.num_judges;
     currentRoom.categories = room.categories;
     currentRoom.contestants = room.contestants;
+    currentRoom.allowNext = room.allowNext !== undefined ? room.allowNext : true;
     currentRoom.activeJudgeNumber = room.judgeNumber || selectedJudge;
 
     await initKahootStylePortal();
@@ -463,7 +609,8 @@ async function initKahootStylePortal() {
   wizardCatIdx = 0;
   wizardCandIdx = 0;
   wizardScoreDrafts = {};
-  isScoresLocked = false;
+  lockedSteps = new Set();
+  isAllScoresSubmitted = false;
 
   try {
     const res = await fetch(`${API_BASE_URL}/rooms/${currentRoom.id}/scores/judge/${user.id}`);
@@ -471,35 +618,142 @@ async function initKahootStylePortal() {
       const existingScores = await res.json();
       existingScores.forEach(s => {
         wizardScoreDrafts[`${s.contestant_id}_${s.criteria_id}`] = s.score;
-        if (s.is_final) isScoresLocked = true;
       });
     }
   } catch (err) {
     console.error("Error fetching existing judge scores:", err);
   }
 
+  // Determine which steps (catIdx_candIdx) are already saved & locked, and resume at the first incomplete step
+  let foundIncomplete = false;
+  for (let cIdx = 0; cIdx < currentRoom.categories.length; cIdx++) {
+    const cat = currentRoom.categories[cIdx];
+    for (let pIdx = 0; pIdx < currentRoom.contestants.length; pIdx++) {
+      const cand = currentRoom.contestants[pIdx];
+      const allCritSaved = cat.criteria.every(
+        crit => wizardScoreDrafts[`${cand.id}_${crit.id}`] !== undefined
+      );
+
+      if (allCritSaved) {
+        lockedSteps.add(`${cIdx}_${pIdx}`);
+      } else if (!foundIncomplete) {
+        wizardCatIdx = cIdx;
+        wizardCandIdx = pIdx;
+        foundIncomplete = true;
+      }
+    }
+  }
+
+  const totalSteps = currentRoom.categories.length * currentRoom.contestants.length;
+  if (totalSteps > 0 && lockedSteps.size >= totalSteps) {
+    isAllScoresSubmitted = true;
+  }
+
   const lockBanner = document.getElementById('judge-locked-banner');
-  if (lockBanner) lockBanner.hidden = !isScoresLocked;
+  if (lockBanner) lockBanner.hidden = !isAllScoresSubmitted;
 
-  document.getElementById('judging-summary-card').hidden = true;
-  document.getElementById('judging-active-card').hidden = false;
-  document.getElementById('wizard-progress-bar').hidden = false;
+  startJudgeHeartbeat();
 
-  renderWizardStep();
+  if (isAllScoresSubmitted) {
+    renderWizardSummaryTable();
+  } else {
+    document.getElementById('judging-summary-card').hidden = true;
+    document.getElementById('judging-active-card').hidden = false;
+    document.getElementById('wizard-progress-bar').hidden = false;
+    renderWizardStep();
+  }
 }
 
-function saveActiveCardInputs() {
+// Polls admin's allowNext setting every 2.5s and reports live status
+function startJudgeHeartbeat() {
+  sendJudgeHeartbeat();
+  if (judgeHeartbeatInterval) clearInterval(judgeHeartbeatInterval);
+  judgeHeartbeatInterval = setInterval(sendJudgeHeartbeat, 2500);
+}
+
+async function sendJudgeHeartbeat() {
+  if (!currentRoom.id || !currentRoom.activeJudgeNumber) return;
+
   const currentCat = currentRoom.categories[wizardCatIdx];
   const currentCand = currentRoom.contestants[wizardCandIdx];
-  if (!currentCat || !currentCand) return;
+  let statusText = 'Reviewing Tabulation';
 
-  currentCat.criteria.forEach(crit => {
-    const input = document.getElementById(`wizard-crit-${crit.id}`);
-    if (input) {
-      const val = parseFloat(input.value);
-      wizardScoreDrafts[`${currentCand.id}_${crit.id}`] = isNaN(val) ? '' : val;
+  if (isAllScoresSubmitted) {
+    statusText = 'Completed All Categories';
+  } else if (currentCat && currentCand) {
+    const candNum = currentCand.number || currentCand.contestant_number;
+    statusText = `Scoring Candidate #${candNum} — ${currentCat.name}`;
+  }
+
+  try {
+    const res = await fetch(`${API_BASE_URL}/rooms/${currentRoom.id}/judge-heartbeat`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        judgeNumber: currentRoom.activeJudgeNumber,
+        statusText
+      })
+    });
+    if (res.ok) {
+      const data = await res.json();
+      if (data.allowNext !== undefined && data.allowNext !== currentRoom.allowNext) {
+        currentRoom.allowNext = data.allowNext;
+        validateCurrentStepInputs();
+      }
     }
-  });
+  } catch (err) {
+    // Silent background retry
+  }
+}
+
+function isStepLocked(catIdx, candIdx) {
+  return isAllScoresSubmitted || lockedSteps.has(`${catIdx}_${candIdx}`);
+}
+
+function validateCurrentStepInputs() {
+  const nextBtn = document.getElementById('btn-wizard-next');
+  const holdBanner = document.getElementById('admin-hold-banner');
+  if (!nextBtn) return;
+
+  const stepKey = `${wizardCatIdx}_${wizardCandIdx}`;
+  const isLockedView = isStepLocked(wizardCatIdx, wizardCandIdx);
+
+  // Check if all sub-criteria inputs have valid numbers between 0 and 100
+  const currentCat = currentRoom.categories[wizardCatIdx];
+  let allFieldsValid = true;
+
+  if (currentCat && currentCat.criteria) {
+    for (const crit of currentCat.criteria) {
+      const input = document.getElementById(`wizard-crit-${crit.id}`);
+      if (!input || input.value.trim() === '') {
+        allFieldsValid = false;
+        break;
+      }
+      const val = parseFloat(input.value);
+      if (isNaN(val) || val < 0 || val > 100) {
+        allFieldsValid = false;
+        break;
+      }
+    }
+  }
+
+  // Admin gatekeeper check (only blocks advancing forward, not reviewing already-locked steps)
+  const blockedByAdmin = !currentRoom.allowNext;
+  if (holdBanner) {
+    holdBanner.hidden = !blockedByAdmin;
+  }
+
+  // Update button text for locked vs active step
+  const isLastStep = (wizardCatIdx === currentRoom.categories.length - 1) &&
+                     (wizardCandIdx === currentRoom.contestants.length - 1);
+
+  if (isLockedView) {
+    nextBtn.textContent = isLastStep ? 'View Final Summary →' : 'Next (Locked) →';
+    nextBtn.disabled = blockedByAdmin || isSavingStep;
+  } else {
+    nextBtn.textContent = isLastStep ? 'Save & Finish Judging 🔒' : 'Save & Next →';
+    nextBtn.disabled = !allFieldsValid || blockedByAdmin || isSavingStep;
+  }
 }
 
 function renderWizardStep() {
@@ -508,6 +762,7 @@ function renderWizardStep() {
 
   const currentCat = cats[wizardCatIdx];
   const currentCand = cands[wizardCandIdx];
+  const stepLocked = isStepLocked(wizardCatIdx, wizardCandIdx);
 
   // Progress Bar updates
   const totalSteps = cats.length * cands.length;
@@ -522,6 +777,10 @@ function renderWizardStep() {
   document.getElementById('active-cat-badge').textContent = currentCat.name;
   document.getElementById('active-cand-title').textContent = `Candidate #${currentCand.number || currentCand.contestant_number} — ${currentCand.name}`;
   document.getElementById('active-cand-rep').textContent = currentCand.representation || '';
+
+  // Read-only badge visibility
+  const readonlyBadge = document.getElementById('step-readonly-badge');
+  if (readonlyBadge) readonlyBadge.hidden = !stepLocked;
 
   // Render Sub-Criteria Fields
   const container = document.getElementById('active-criteria-fields');
@@ -539,39 +798,133 @@ function renderWizardStep() {
         <label style="color:#fff; font-weight:600;">${crit.name}</label>
         <span style="color:#d4af37; font-size:0.8rem; background:#222; padding:2px 6px; border-radius:4px;">${crit.weight}%</span>
       </div>
-      <input type="number" id="wizard-crit-${crit.id}" class="score-input" min="0" max="100" step="0.1" 
-             placeholder="Enter score 0-100" value="${savedVal}" ${isScoresLocked ? 'disabled' : ''} required>
+      <input type="number" id="wizard-crit-${crit.id}" class="score-input ${stepLocked ? 'locked-input' : ''}" 
+             min="0" max="100" step="0.1" placeholder="Enter score 0-100" 
+             value="${savedVal}" ${stepLocked ? 'disabled readonly' : ''} required>
     `;
     container.appendChild(field);
+
+    if (!stepLocked) {
+      const inputEl = field.querySelector('input');
+      inputEl.addEventListener('input', () => {
+        const val = parseFloat(inputEl.value);
+        wizardScoreDrafts[key] = isNaN(val) ? '' : val;
+        validateCurrentStepInputs();
+      });
+    }
   });
 
   // Controls
   const prevBtn = document.getElementById('btn-wizard-prev');
   if (prevBtn) prevBtn.disabled = (wizardCatIdx === 0 && wizardCandIdx === 0);
+
+  validateCurrentStepInputs();
+  sendJudgeHeartbeat();
 }
 
-function wizardNextCandidate() {
-  saveActiveCardInputs();
+// --- CLICKING "NEXT" = SAVE & LOCK CURRENT CANDIDATE/CATEGORY SCORES ---
+async function wizardNextCandidate() {
+  if (isSavingStep) return;
+
+  if (!currentRoom.allowNext) {
+    alert('Please wait for the Admin to unlock the Next button.');
+    return;
+  }
 
   const cats = currentRoom.categories;
   const cands = currentRoom.contestants;
+  const currentCat = cats[wizardCatIdx];
+  const currentCand = cands[wizardCandIdx];
+  const stepKey = `${wizardCatIdx}_${wizardCandIdx}`;
+  const alreadyLocked = isStepLocked(wizardCatIdx, wizardCandIdx);
 
+  // If this step is NOT yet locked, validate, save to DB, and lock it now
+  if (!alreadyLocked) {
+    const user = getLoggedInUser();
+    if (!user || !user.id) {
+      alert('Session expired. Please log in again.');
+      return;
+    }
+
+    let stepScores = [];
+    for (const crit of currentCat.criteria) {
+      const input = document.getElementById(`wizard-crit-${crit.id}`);
+      const val = parseFloat(input ? input.value : '');
+      if (isNaN(val) || val < 0 || val > 100) {
+        alert(`Please enter a valid score (0–100) for ${crit.name}.`);
+        return;
+      }
+      wizardScoreDrafts[`${currentCand.id}_${crit.id}`] = val;
+      stepScores.push({
+        criteriaId: parseInt(crit.id, 10),
+        score: val
+      });
+    }
+
+    const isLastStep = (wizardCatIdx === cats.length - 1) && (wizardCandIdx === cands.length - 1);
+
+    // Compute next status label for Admin Live Tracking
+    let nextStatusText = 'Completed All Categories';
+    if (!isLastStep) {
+      const nextCandIdx = (wizardCandIdx < cands.length - 1) ? wizardCandIdx + 1 : 0;
+      const nextCatIdx = (wizardCandIdx < cands.length - 1) ? wizardCatIdx : wizardCatIdx + 1;
+      const nextCand = cands[nextCandIdx];
+      const nextCat = cats[nextCatIdx];
+      nextStatusText = `Scoring Candidate #${nextCand.number || nextCand.contestant_number} — ${nextCat.name}`;
+    }
+
+    isSavingStep = true;
+    validateCurrentStepInputs();
+
+    try {
+      const res = await fetch(`${API_BASE_URL}/scores/submit`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          roomId: currentRoom.id,
+          userId: user.id,
+          contestantId: parseInt(currentCand.id, 10),
+          scores: stepScores,
+          final: true, // Locks this category's scores for this candidate in DB
+          statusText: nextStatusText
+        })
+      });
+
+      const result = await res.json();
+      if (!res.ok) {
+        throw new Error(result.message || 'Failed to save step scores.');
+      }
+
+      lockedSteps.add(stepKey);
+    } catch (err) {
+      console.error('Step save error:', err);
+      alert('Error saving scores: ' + err.message);
+      isSavingStep = false;
+      validateCurrentStepInputs();
+      return;
+    }
+
+    isSavingStep = false;
+  }
+
+  // Advance to next candidate / category or finish
   if (wizardCandIdx < cands.length - 1) {
     wizardCandIdx++;
     renderWizardStep();
   } else if (wizardCatIdx < cats.length - 1) {
     wizardCatIdx++;
-    wizardCandIdx = 0; // Reset to candidate #1 for next category
+    wizardCandIdx = 0;
     renderWizardStep();
   } else {
-    // Show summary overview table when all categories & candidates are complete
+    isAllScoresSubmitted = true;
+    const lockBanner = document.getElementById('judge-locked-banner');
+    if (lockBanner) lockBanner.hidden = false;
     renderWizardSummaryTable();
   }
 }
 
+// --- CLICKING "PREVIOUS" = READ-ONLY VIEW OF PAST SCORES ---
 function wizardPrevCandidate() {
-  saveActiveCardInputs();
-
   const cands = currentRoom.contestants;
 
   if (wizardCandIdx > 0) {
@@ -579,7 +932,7 @@ function wizardPrevCandidate() {
     renderWizardStep();
   } else if (wizardCatIdx > 0) {
     wizardCatIdx--;
-    wizardCandIdx = cands.length - 1; // Go to last candidate of previous category
+    wizardCandIdx = cands.length - 1;
     renderWizardStep();
   }
 }
@@ -618,67 +971,11 @@ function renderWizardSummaryTable() {
   document.getElementById('summary-table-container').innerHTML = html;
 }
 
-function returnToWizardEditing() {
+function returnToWizardReview() {
   document.getElementById('judging-summary-card').hidden = true;
   document.getElementById('judging-active-card').hidden = false;
   document.getElementById('wizard-progress-bar').hidden = false;
   renderWizardStep();
-}
-
-// --- SUBMIT JUDGE SCORES ---
-async function handleJudgeScoreSubmit(e, isFinal) {
-  if (e) e.preventDefault();
-  saveActiveCardInputs();
-
-  const user = getLoggedInUser();
-  if (!user || !user.id) {
-    alert('Session expired. Please log in again.');
-    return;
-  }
-
-  const candidateGrouped = {};
-
-  currentRoom.contestants.forEach(cand => {
-    candidateGrouped[cand.id] = [];
-    currentRoom.categories.forEach(cat => {
-      cat.criteria.forEach(crit => {
-        const key = `${cand.id}_${crit.id}`;
-        const scoreVal = parseFloat(wizardScoreDrafts[key]) || 0;
-        candidateGrouped[cand.id].push({
-          criteriaId: parseInt(crit.id, 10),
-          score: scoreVal
-        });
-      });
-    });
-  });
-
-  try {
-    for (const contestantId in candidateGrouped) {
-      const res = await fetch(`${API_BASE_URL}/scores/submit`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          roomId: currentRoom.id,
-          userId: user.id,
-          contestantId: parseInt(contestantId, 10),
-          scores: candidateGrouped[contestantId],
-          final: isFinal
-        })
-      });
-
-      const result = await res.json();
-      if (!res.ok) {
-        throw new Error(result.message || "Failed to submit scores.");
-      }
-    }
-
-    alert(isFinal ? "Official scores submitted and locked!" : "Draft scores saved successfully.");
-    if (isFinal) resetToRoleSelection();
-
-  } catch (err) {
-    console.error("Score submission error:", err);
-    alert("Submission error: " + err.message);
-  }
 }
 
 function exportResults() {
