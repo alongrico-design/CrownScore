@@ -39,9 +39,9 @@
         <div class="modal-card">
             <h3>Confirm Logout</h3>
             <p>Are you sure you want to log out? Any unsaved score drafts in progress will be lost.</p>
-            <div class="modal-actions" style="display:flex; gap:12px; justify-content:center; margin-top:20px;">
+            <div class="modal-actions">
                 <button type="button" id="btn-cancel-logout" class="btn-secondary">Cancel</button>
-                <button type="button" id="btn-confirm-logout" class="btn-danger" style="background:#e74c3c; color:#fff; border:none; padding:8px 16px; border-radius:6px; cursor:pointer;">Logout</button>
+                <button type="button" id="btn-confirm-logout" class="btn-danger">Logout</button>
             </div>
         </div>
     </div>
@@ -165,12 +165,15 @@
         <div id="admin-dashboard-view" class="card-container width-extra-wide hidden">
             <div class="dashboard-header">
                 <div>
-                    <h2>Live Scoring Tracking Display</h2>
-                    <p class="subtitle">Room Status: <strong class="crown-rank">Active Room</strong></p>
+                    <h2 id="admin-dashboard-title">Live Scoring Tracking Display</h2>
+                    <p class="subtitle">Room Code: <strong id="admin-room-code-display" class="crown-rank">---</strong> • Status: <strong class="crown-rank">Active Room</strong></p>
                 </div>
-                <div class="header-actions">
-                    <button class="btn-secondary" onclick="exportResults()">📥 Export Results</button>
-                    <button class="btn-primary-danger" onclick="resetToRoleSelection()">End Room</button>
+                <div class="header-actions" style="flex-wrap:wrap; align-items:center;">
+                    <button type="button" id="btn-toggle-judge-next" class="btn-pacing allowed" onclick="toggleAdminAllowNext()">
+                        🔓 Next Button: ALLOWED
+                    </button>
+                    <button type="button" class="btn-secondary" style="margin-top:0;" onclick="exportResults()">📥 Export Results</button>
+                    <button type="button" class="btn-primary-danger" onclick="endActiveRoom()">End Room</button>
                 </div>
             </div>
 
@@ -184,13 +187,13 @@
                     <span class="stat-value" id="stat-judges">0</span>
                 </div>
                 <div class="stat-card">
-                    <span class="stat-title">Status</span>
-                    <span class="stat-value status-live">● LIVE SCORING</span>
+                    <span class="stat-title">Pacing Control</span>
+                    <span class="stat-value" id="stat-pacing-status" style="font-size:1rem; color:#2ecc71;">Judges Unlocked</span>
                 </div>
             </div>
 
             <div class="dashboard-section">
-                <h3>Judges Submission Status</h3>
+                <h3>Live Judges Progress & Submission Status</h3>
                 <div class="judges-status-list" id="judges-status-list"></div>
             </div>
 
@@ -236,13 +239,17 @@
 
         <!-- STEP 3B: KAHOOT-STYLE SEQUENTIAL JUDGE PORTAL -->
         <div id="judge-portal-view" class="card-container width-wide hidden">
-            <div class="portal-header" style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1rem;">
+            <div class="portal-header">
                 <h2 id="judge-portal-title">Judge Scoring Portal</h2>
-                <button type="button" class="btn-back" onclick="resetToRoleSelection()">Exit Room</button>
+                <button type="button" class="btn-back" style="margin-bottom:0;" onclick="resetToRoleSelection()">Exit Room</button>
             </div>
 
-            <div id="judge-locked-banner" hidden style="background:rgba(46, 204, 113, 0.15); border:1px solid #2ecc71; padding:12px; border-radius:8px; margin-bottom:1rem; color:#2ecc71; font-weight:bold;">
-                ✓ Your official scores are submitted and locked.
+            <div id="judge-locked-banner" hidden class="banner-success">
+                ✓ Your official scores for this event are completely submitted and locked.
+            </div>
+
+            <div id="admin-hold-banner" hidden class="banner-warning">
+                ⏸ Waiting for Admin to unlock the "Next" button before advancing...
             </div>
 
             <div id="wizard-progress-bar" class="wizard-progress" style="margin-bottom:1.5rem;">
@@ -256,30 +263,32 @@
             </div>
 
             <div id="judging-active-card" class="scoring-card">
-                <div style="margin-bottom:1rem;">
-                    <span id="active-cat-badge" style="background:#d4af37; color:#000; font-size:0.75rem; font-weight:bold; padding:3px 8px; border-radius:4px; text-transform:uppercase;">Category Name</span>
-                    <h2 id="active-cand-title" style="margin-top:8px; font-size:1.4rem; color:#fff;">Candidate Name</h2>
-                    <p id="active-cand-rep" style="color:#aaa; font-size:0.9rem; margin:0;">Representation</p>
+                <div style="margin-bottom:1rem; display:flex; justify-content:space-between; align-items:flex-start; flex-wrap:wrap; gap:8px;">
+                    <div>
+                        <span id="active-cat-badge" style="background:#d4af37; color:#000; font-size:0.75rem; font-weight:bold; padding:3px 8px; border-radius:4px; text-transform:uppercase;">Category Name</span>
+                        <h2 id="active-cand-title" style="margin-top:8px; font-size:1.4rem; color:#fff;">Candidate Name</h2>
+                        <p id="active-cand-rep" style="color:#aaa; font-size:0.9rem; margin:0;">Representation</p>
+                    </div>
+                    <span id="step-readonly-badge" hidden class="readonly-pill">🔒 Locked — View Only</span>
                 </div>
 
                 <div id="active-criteria-fields"></div>
 
                 <div style="display:flex; justify-content:space-between; margin-top:1.5rem; gap:12px;">
-                    <button type="button" id="btn-wizard-prev" class="btn-secondary" onclick="wizardPrevCandidate()">← Previous</button>
-                    <button type="button" id="btn-wizard-next" class="btn-primary" onclick="wizardNextCandidate()">Next Candidate →</button>
+                    <button type="button" id="btn-wizard-prev" class="btn-secondary" style="margin-top:0;" onclick="wizardPrevCandidate()">← Previous (View)</button>
+                    <button type="button" id="btn-wizard-next" class="btn-primary" onclick="wizardNextCandidate()" disabled>Save & Next →</button>
                 </div>
             </div>
 
             <div id="judging-summary-card" class="scoring-card" hidden>
-                <h3 style="color:#d4af37; margin-bottom:0.5rem;">Review & Submit Official Tabulation</h3>
-                <p style="color:#aaa; font-size:0.9rem; margin-bottom:1rem;">Review your scores below before submitting. Submitting will lock your entries for this pageant.</p>
+                <h3 style="color:#d4af37; margin-bottom:0.5rem;">Official Tabulation Completed</h3>
+                <p style="color:#aaa; font-size:0.9rem; margin-bottom:1rem;">All categories and candidates have been scored, saved, and locked.</p>
 
                 <div id="summary-table-container" class="table-responsive" style="margin-bottom:1.5rem;"></div>
 
                 <div style="display:flex; gap:12px; justify-content:flex-end;">
-                    <button type="button" class="btn-secondary" onclick="returnToWizardEditing()">← Back & Edit Scores</button>
-                    <button type="button" class="btn-secondary" onclick="handleJudgeScoreSubmit(event, false)">Save Draft</button>
-                    <button type="button" class="btn-primary" onclick="handleJudgeScoreSubmit(event, true)">Submit Final Scores 🔒</button>
+                    <button type="button" class="btn-secondary" style="margin-top:0;" onclick="returnToWizardReview()">← Review Locked Scores</button>
+                    <button type="button" class="btn-primary" style="width:auto;" onclick="resetToRoleSelection()">Done & Exit Room</button>
                 </div>
             </div>
         </div>
