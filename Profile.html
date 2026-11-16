@@ -113,7 +113,6 @@
         });
 
         function initLogoutModalGuard() {
-            // Event delegation on document guarantees capturing click events on .btn-logout
             document.addEventListener('click', function (e) {
                 const logoutBtn = e.target.closest('.btn-logout');
                 if (logoutBtn) {
@@ -278,6 +277,8 @@
                 .forEach(room => {
                     const status = String(room.scoring_status || (room.last_submitted ? 'submitted' : 'in progress')).toLowerCase();
                     const submitted = status === 'submitted';
+                    const roomEnded = String(room.room_status || '').toLowerCase() === 'completed';
+                    const isFinished = submitted || roomEnded;
                     const title = room.name || room.room_name || `Room ${room.code}`;
                     const code = encodeURIComponent(room.code);
 
@@ -297,7 +298,7 @@
                             <span>${fmtDateTime(room.last_submitted)}</span>
                         </div>
                         <div class="event-actions">
-                            <a class="btn-mini ${submitted ? '' : 'btn-mini--solid'}" href="${submitted ? 'Results.html' : 'Room.html'}?room=${code}">${submitted ? 'View results' : 'Resume'}</a>
+                            <a class="btn-mini ${isFinished ? '' : 'btn-mini--solid'}" href="${isFinished ? 'Results.html' : 'Room.html'}?room=${code}">${isFinished ? 'View results' : 'Manage'}</a>
                         </div>
                     `;
                     container.appendChild(row);
