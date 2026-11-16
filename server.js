@@ -9,7 +9,7 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
-// MySQL Connection Pool Setup using Railway Environment Variables
+// MySQL Connection Pool Setup
 const pool = mysql.createPool({
   host: process.env.DB_HOST,
   port: Number(process.env.DB_PORT),
@@ -25,7 +25,6 @@ const pool = mysql.createPool({
 
 const db = pool.promise();
 
-// Test Database Connection
 pool.getConnection((err, conn) => {
   if (err) {
     console.error('Database connection failed:', err.message);
@@ -36,6 +35,23 @@ pool.getConnection((err, conn) => {
 });
 
 /* ==========================================================================
+   LIVE ROOM PACING & JUDGE PROGRESS TRACKER (IN-MEMORY + DB SYNC)
+   ========================================================================== */
+// Stores { [roomId]: { allowNext: boolean, judges: { [judgeNumber]: { statusText, updatedAt } } } }
+const roomLiveState = new Map();
+
+function getRoomLiveState(roomId) {
+  const key = String(roomId);
+  if (!roomLiveState.has(key)) {
+    roomLiveState.set(key, {
+      allowNext: true, // Default: judges can advance once fields are filled
+      judges: {}
+    });
+  }
+  return roomLiveState.get(key);
+}
+
+/* ==========================================================================
    HELPERS
    ========================================================================== */
 
@@ -44,7 +60,6 @@ const hashSecret = (plain) => bcrypt.hash(plain, 10);
 const normAnswer = (s) => String(s || '').trim().toLowerCase();
 const toNum = (v) => { const n = Number(v); return isNaN(n) ? 0 : n; };
 
-// Works with old plain-text rows AND new hashed rows
 async function checkSecret(plain, stored) {
   if (!stored) return false;
   return isHash(stored) ? bcrypt.compare(plain, stored) : plain === stored;
@@ -57,7 +72,6 @@ async function checkAnswer(plain, stored) {
     : normAnswer(plain) === normAnswer(stored);
 }
 
-// In-memory rate limiter
 const attempts = new Map();
 
 function lockedSeconds(key) {
@@ -83,7 +97,6 @@ function generateRoomCode() {
   return code;
 }
 
-// Extract primary key regardless of whether schema names it user_id or id
 function extractUserId(userRow) {
   if (!userRow) return null;
   return userRow.user_id !== undefined ? userRow.user_id : userRow.id;
@@ -97,7 +110,6 @@ async function getParticipant(roomId, userId) {
   return rows[0] || null;
 }
 
-// Categories (with their criteria) and contestants of one room
 async function loadRoomDetails(roomId) {
   const [cats] = await db.query(
     'SELECT category_id AS id, category_name AS name, weight FROM categories WHERE room_id = ? ORDER BY category_id',
@@ -124,7 +136,6 @@ async function loadRoomDetails(roomId) {
   return { categories, contestants };
 }
 
-// Returns an error message, or '' when the room setup is valid
 function checkSetup({ roomName, password, numJudges, categories, contestants }) {
   if (!roomName || !String(roomName).trim()) return 'Room name is required.';
   if (!password || String(password).length < 4) return 'Room password must be at least 4 characters.';
@@ -225,7 +236,6 @@ app.post('/api/login', async (req, res) => {
     }
 
     clearFails(key);
-
     const resolvedId = extractUserId(user);
 
     if (!isHash(user.password)) {
@@ -291,7 +301,6 @@ app.post('/api/reset-password', async (req, res) => {
     }
 
     clearFails(key);
-    
     const newHash = await hashSecret(String(newPassword));
     const resolvedId = extractUserId(user);
 
@@ -305,7 +314,7 @@ app.post('/api/reset-password', async (req, res) => {
 });
 
 /* ==========================================================================
-   2. ROOM MANAGEMENT
+   2. ROOM MANAGEMENT & LIVE PACING CONTROLS
    ========================================================================== */
 
 app.post('/api/rooms/create', async (req, res) => {
@@ -318,7 +327,6 @@ app.post('/api/rooms/create', async (req, res) => {
 
   let connection;
   try {
-    // Check user existence using user_id primary key directly
     const [users] = await db.query('SELECT * FROM users WHERE user_id = ? LIMIT 1', [userId]);
     if (!users.length) return res.status(401).json({ message: 'Please log in again.' });
 
@@ -386,6 +394,7 @@ app.post('/api/rooms/create', async (req, res) => {
     }
 
     await connection.commit();
+    getRoomLiveState(roomId); // Initialize live tracking state
     res.json({ roomId, code: roomCode, categories: insertedCategories, contestants: insertedContestants });
 
   } catch (err) {
@@ -478,12 +487,14 @@ app.post('/api/rooms/join', async (req, res) => {
     }
 
     const details = await loadRoomDetails(room.room_id);
+    const liveState = getRoomLiveState(room.room_id);
     res.json({
       id: room.room_id,
       code: room.room_code,
       room_name: room.room_name,
       num_judges: room.num_judges,
       judgeNumber: slot,
+      allowNext: liveState.allowNext,
       ...details
     });
 
@@ -506,6 +517,7 @@ app.get('/api/rooms/by-code/:code', async (req, res) => {
     if (!participant) return res.status(403).json({ message: 'You are not part of this room.' });
 
     const details = await loadRoomDetails(room.room_id);
+    const liveState = getRoomLiveState(room.room_id);
     res.json({
       id: room.room_id,
       code: room.room_code,
@@ -514,12 +526,42 @@ app.get('/api/rooms/by-code/:code', async (req, res) => {
       status: room.status,
       role: participant.role,
       judgeNumber: participant.judge_number,
+      allowNext: liveState.allowNext,
       ...details
     });
   } catch (err) {
     console.error('By-code error:', err);
     res.status(500).json({ message: err.message });
   }
+});
+
+// Admin toggles whether judges are permitted to click "Next"
+app.post('/api/rooms/:roomId/toggle-next', async (req, res) => {
+  const { userId, allowNext } = req.body;
+  try {
+    const [rooms] = await db.query('SELECT created_by FROM rooms WHERE room_id = ? LIMIT 1', [req.params.roomId]);
+    if (!rooms.length || rooms[0].created_by !== Number(userId)) {
+      return res.status(403).json({ message: 'Only the room admin can change pacing controls.' });
+    }
+    const state = getRoomLiveState(req.params.roomId);
+    state.allowNext = Boolean(allowNext);
+    res.json({ allowNext: state.allowNext });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+});
+
+// Judges poll this lightweight endpoint to check if "Next" is allowed & report current step
+app.post('/api/rooms/:roomId/judge-heartbeat', async (req, res) => {
+  const { judgeNumber, statusText } = req.body;
+  const state = getRoomLiveState(req.params.roomId);
+  if (judgeNumber && statusText) {
+    state.judges[judgeNumber] = {
+      statusText: String(statusText),
+      updatedAt: Date.now()
+    };
+  }
+  res.json({ allowNext: state.allowNext });
 });
 
 app.post('/api/rooms/:roomId/complete', async (req, res) => {
@@ -537,7 +579,7 @@ app.post('/api/rooms/:roomId/complete', async (req, res) => {
 });
 
 /* ==========================================================================
-   3. SCORES
+   3. SCORES (INCREMENTAL & FINAL)
    ========================================================================== */
 
 app.get('/api/rooms/:roomId/scores', async (req, res) => {
@@ -557,7 +599,13 @@ app.get('/api/rooms/:roomId/scores', async (req, res) => {
        WHERE s.room_id = ?`,
       [req.params.roomId]
     );
-    res.json(scores);
+
+    const liveState = getRoomLiveState(req.params.roomId);
+    res.json({
+      scores,
+      allowNext: liveState.allowNext,
+      judgeProgress: liveState.judges
+    });
   } catch (err) {
     res.status(500).json({ message: err.message });
   }
@@ -581,7 +629,7 @@ app.get('/api/rooms/:roomId/scores/judge/:userId', async (req, res) => {
 });
 
 app.post('/api/scores/submit', async (req, res) => {
-  const { roomId, userId, contestantId, scores, final } = req.body;
+  const { roomId, userId, contestantId, scores, final, statusText } = req.body;
 
   if (!roomId || !userId || !contestantId || !Array.isArray(scores) || !scores.length) {
     return res.status(400).json({ message: 'Missing score data.' });
@@ -623,12 +671,15 @@ app.post('/api/scores/submit', async (req, res) => {
       return res.status(400).json({ message: 'Please score every sub-criterion before submitting.' });
     }
 
+    // Check if any of the specific submitted criteria for this contestant are already locked
+    const criteriaIds = scores.map(s => Number(s.criteriaId));
     const [locked] = await db.query(
-      'SELECT COUNT(*) AS n FROM scores WHERE room_id = ? AND judge_id = ? AND contestant_id = ? AND is_final = 1',
-      [roomId, userId, contestantId]
+      `SELECT COUNT(*) AS n FROM scores 
+       WHERE room_id = ? AND judge_id = ? AND contestant_id = ? AND criteria_id IN (?) AND is_final = 1`,
+      [roomId, userId, contestantId, criteriaIds]
     );
     if (locked[0].n > 0) {
-      return res.status(409).json({ message: 'Scores for this candidate are already submitted and locked.' });
+      return res.status(409).json({ message: 'Scores for this category/candidate are already locked.' });
     }
 
     connection = await pool.promise().getConnection();
@@ -644,7 +695,17 @@ app.post('/api/scores/submit', async (req, res) => {
     }
 
     await connection.commit();
-    res.json({ message: final ? 'Scores submitted.' : 'Draft saved.' });
+
+    // Update live judge progress status in memory
+    if (participant.judge_number && statusText) {
+      const state = getRoomLiveState(roomId);
+      state.judges[participant.judge_number] = {
+        statusText: String(statusText),
+        updatedAt: Date.now()
+      };
+    }
+
+    res.json({ message: final ? 'Scores submitted.' : 'Step scores saved and locked.' });
 
   } catch (err) {
     if (connection) await connection.rollback();
@@ -746,7 +807,7 @@ app.get('/api/users/:userId/history', async (req, res) => {
     );
 
     const [judgedRaw] = await db.query(
-      `SELECT r.room_id AS id, r.room_code AS code, r.room_name, rp.judge_number,
+      `SELECT r.room_id AS id, r.room_code AS code, r.room_name, r.status AS room_status, rp.judge_number,
               MAX(s.submitted_at) AS last_submitted,
               COALESCE(SUM(s.is_final = 1), 0) AS final_count,
               (SELECT COUNT(*) FROM contestants c WHERE c.room_id = r.room_id) *
@@ -756,7 +817,7 @@ app.get('/api/users/:userId/history', async (req, res) => {
        JOIN rooms r ON r.room_id = rp.room_id
        LEFT JOIN scores s ON s.room_id = rp.room_id AND s.judge_id = rp.user_id
        WHERE rp.user_id = ? AND rp.role = 'judge'
-       GROUP BY r.room_id, r.room_code, r.room_name, rp.judge_number
+       GROUP BY r.room_id, r.room_code, r.room_name, r.status, rp.judge_number
        ORDER BY last_submitted DESC`,
       [userId]
     );
@@ -765,6 +826,7 @@ app.get('/api/users/:userId/history', async (req, res) => {
       id: r.id,
       code: r.code,
       room_name: r.room_name,
+      room_status: r.room_status,
       judge_number: r.judge_number,
       last_submitted: r.last_submitted,
       scoring_status: Number(r.expected) > 0 && Number(r.final_count) >= Number(r.expected)
@@ -779,7 +841,6 @@ app.get('/api/users/:userId/history', async (req, res) => {
   }
 });
 
-// Start API Server
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
   console.log(`CrownScore API server running on port ${PORT}`);
