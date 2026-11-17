@@ -230,9 +230,21 @@
             </header>
 
             <ol class="steps">
-                <li><strong>Sub-criterion score:</strong> each judge scores a candidate on every sub-criterion, for example Pose 30%, Mastery 30%, Self-Introduction 30% and Audience Impact 10%.</li>
-                <li><strong>Category score:</strong> the system adds up all the sub-criterion scores of that category. A category is worth 100 points in total.</li>
-                <li><strong>Final score:</strong> the category scores are combined, using each category's weight, into the candidate's overall score. The highest final score ranks first.</li>
+                <li>
+                    <strong>Sub-criterion score:</strong> each judge enters a raw score (0–100) for every sub-criterion. The system multiplies each raw score by its sub-criterion weight (totaling 100% per category) — for example, <em>Pose 30%</em>, <em>Mastery 30%</em>, <em>Self-Introduction 30%</em>, and <em>Audience Impact 10%</em>.
+                </li>
+                <li>
+                    <strong>Category score (per judge):</strong> the system adds up all weighted sub-criterion points within that category. Each category is worth <strong>100 points</strong> in total per judge.<br>
+                    <small style="color:#aaa;"><em>Example (Category: Evening Gown): Elegance (50%) score 90 &rarr; 45.00 + Stage Presence (50%) score 80 &rarr; 40.00 = <strong>85.00</strong>.</em></small>
+                </li>
+                <li>
+                    <strong>Live Tracking Dashboard (during the event):</strong> each judge's column sums their completed category scores so far (up to 100 points per category), and the <strong>Live Weighted Average</strong> divides the sum of active judge columns by the number of judges who have scored that candidate.<br>
+                    <small style="color:#aaa;"><em>Example (2 categories, 2 judges): Judge #1 (90.00 + 85.00 = 175.00) and Judge #2 (94.00 + 89.00 = 183.00) &rarr; (175.00 + 183.00) &divide; 2 = <strong>179.00%</strong> live cumulative average.</em></small>
+                </li>
+                <li>
+                    <strong>Official Final Score (0% – 100%):</strong> for each category, the system averages all completed judges' category scores, multiplies each category average by its overall category weight (totaling 100%), and adds them together into the candidate's final score. The highest final score ranks first.<br>
+                    <small style="color:#aaa;"><em>Example (2 categories at 50% each): Swimwear avg 92.00 (&times; 50% = 46.00) + Evening Gown avg 87.00 (&times; 50% = 43.50) = <strong>89.50%</strong>.</em></small>
+                </li>
             </ol>
         </article>
 
